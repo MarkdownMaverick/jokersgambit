@@ -1,7 +1,9 @@
 # Joker's Gambit  
 **A fast-paced, high-stakes 2-player card game built with raylib**
 
-![screenshot placeholder]
+![Screenshot 1: Game Interface](screenshot1.png)
+![Screenshot 2: Game Board](screenshot2.png)
+![Screenshot 3: Gameplay Rules](screenshot3.png)
 
 ## Quick Overview  
 Single-screen competitive card game for 1 or 2 human players (or watch AI vs AI).  
