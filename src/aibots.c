@@ -1,9 +1,9 @@
+// aibots.c
+
 #include "aibots.h"
 
-void AI_SelectDiscard(GameState *g, int player) {
-    Card *hand = (player == 1) ? g->player1_hand : g->player2_hand;
-    int hand_size = (player == 1) ? g->p1_hand_size : g->p2_hand_size;
-    int best_idx = 0;
+// BOB AI: Original behavior - prefers Jokers, then low cards
+static void AI_Bob_SelectDiscard(Card *hand, int hand_size, int *best_idx) {
     int joker_idx = -1;
     int low_card_idx = -1;
 
@@ -17,9 +17,85 @@ void AI_SelectDiscard(GameState *g, int player) {
         }
     }
 
-    if (joker_idx != -1) best_idx = joker_idx;
-    else if (low_card_idx != -1) best_idx = low_card_idx;
-    else best_idx = 0;
+    if (joker_idx != -1) *best_idx = joker_idx;
+    else if (low_card_idx != -1) *best_idx = low_card_idx;
+    else *best_idx = 0;
+}
+
+// THEA AI: Discards randomly with no Joker preference
+static void AI_Thea_SelectDiscard(Card *hand, int hand_size, int *best_idx) {
+    (void)hand;  // Unused in random selection
+    *best_idx = rand() % hand_size;
+}
+
+// FLINT AI: Never discards Jokers, prefers low cards
+static void AI_Flint_SelectDiscard(Card *hand, int hand_size, int *best_idx) {
+    int low_card_idx = -1;
+    int non_joker_idx = -1;
+
+    for (int i = 0; i < hand_size; i++) {
+        if (hand[i].rank != RANK_JOKER) {
+            if (non_joker_idx == -1) non_joker_idx = i;
+            if (hand[i].rank >= RANK_2 && hand[i].rank <= RANK_9) {
+                if (low_card_idx == -1) low_card_idx = i;
+            }
+        }
+    }
+
+    if (low_card_idx != -1) *best_idx = low_card_idx;
+    else if (non_joker_idx != -1) *best_idx = non_joker_idx;
+    else *best_idx = 0;  // Fallback (shouldn't happen if hand has non-Jokers)
+}
+
+void AI_SelectDiscard(GameState *g, int player) {
+    Card *hand = (player == 1) ? g->player1_hand : g->player2_hand;
+    int hand_size = (player == 1) ? g->p1_hand_size : g->p2_hand_size;
+    int best_idx = 0;
+
+    // Determine which AI type to use
+    AIType ai_type = AI_BOB;  // Default
+    
+    if (g->mode == MODE_AIVSAI) {
+        // In AI vs AI mode:
+        // Player 1 = FLINT (index 2), Player 2 = THEA (index 1)
+        if (player == 1) {
+            // Find FLINT account
+            for (int i = 0; i < g->account_count; i++) {
+                if (g->accounts[i].is_ai && g->accounts[i].ai_type == AI_FLINT) {
+                    ai_type = AI_FLINT;
+                    break;
+                }
+            }
+        } else {
+            // Find THEA account
+            for (int i = 0; i < g->account_count; i++) {
+                if (g->accounts[i].is_ai && g->accounts[i].ai_type == AI_THEA) {
+                    ai_type = AI_THEA;
+                    break;
+                }
+            }
+        }
+    } else if (g->mode == MODE_PVAI && player == 2) {
+        // In PvAI mode, use the selected opponent AI
+        ai_type = g->selected_opponent_ai;
+    } else if (player == 1 && g->p1_account_index != -1 && g->accounts[g->p1_account_index].is_ai) {
+        ai_type = g->accounts[g->p1_account_index].ai_type;
+    } else if (player == 2 && g->p2_account_index != -1 && g->accounts[g->p2_account_index].is_ai) {
+        ai_type = g->accounts[g->p2_account_index].ai_type;
+    }
+
+    // Call appropriate AI function
+    switch (ai_type) {
+        case AI_BOB:
+            AI_Bob_SelectDiscard(hand, hand_size, &best_idx);
+            break;
+        case AI_THEA:
+            AI_Thea_SelectDiscard(hand, hand_size, &best_idx);
+            break;
+        case AI_FLINT:
+            AI_Flint_SelectDiscard(hand, hand_size, &best_idx);
+            break;
+    }
 
     if (player == 1) {
         g->p1_discard_idx = best_idx;

@@ -110,8 +110,39 @@ void LoadAllAccounts(GameState *g)
     if (g->account_count == 0)
     {
         // Recreate AI
-        // ... same as above ...
+        for (int i = 0; i < NUM_AI_ACCOUNTS; i++)
+        {
+            Account *a = &g->accounts[g->account_count++];
+            strncpy(a->first_name, AI_NAMES[i], MAX_ACCOUNT_NAME_LEN);
+            a->first_name[MAX_ACCOUNT_NAME_LEN] = '\0';
+            a->last_name[0] = '\0';
+            a->balance = 10.00;
+            a->wins = 0;
+            a->losses = 0;
+            a->is_ai = true;
+            
+            // Set AI type based on name
+            if (strcmp(AI_NAMES[i], "BOB") == 0) a->ai_type = AI_BOB;
+            else if (strcmp(AI_NAMES[i], "THEA") == 0) a->ai_type = AI_THEA;
+            else if (strcmp(AI_NAMES[i], "FLINT") == 0) a->ai_type = AI_FLINT;
+            
+            a->is_active = true;
+        }
         SaveAllAccounts(g);
+    }
+    
+    // DEFAULT BOB LOGIN: Only on application start (p2_account_index will be -1 on first load)
+    if (g->p2_account_index == -1)
+    {
+        for (int i = 0; i < g->account_count; i++)
+        {
+            if (g->accounts[i].is_ai && strcmp(g->accounts[i].first_name, "BOB") == 0)
+            {
+                LoginAccount(g, i, 2);
+                TraceLog(LOG_INFO, "Default: BOB auto-logged into P2 slot");
+                break;
+            }
+        }
     }
 }
 

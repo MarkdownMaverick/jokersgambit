@@ -4,19 +4,12 @@
 #include "mainmenu.h"
 #include "useraccount.h"
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  GLOBAL TEXTURE DEFINITIONS
-// ─────────────────────────────────────────────────────────────────────────────
 Texture2D g_card_back_texture = {0};
 Texture2D g_background_texture = {0};
 Texture2D g_ui_frame_texture = {0};
 Texture2D g_button_texture = {0};
 
 GameState g_initial_state = {0};
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  HELPER FUNCTIONS
-// ─────────────────────────────────────────────────────────────────────────────
 
 float GetRewardMultiplier(int completed_ranks) {
     if (completed_ranks >= 2) return 4.0f;
@@ -215,10 +208,7 @@ void RefreshHands(GameState *g) {
 
 float CalculateFinalScore(float balance, int total_moves, bool is_winner) {
     if (total_moves <= 0) return balance;
-    
-    // Winner gets +$10 per move, loser gets -$10 per move
     float move_bonus = is_winner ? (10.0f * total_moves) : (-10.0f * total_moves);
-    
     return balance + move_bonus;
 }
 
@@ -231,11 +221,9 @@ void UpdateWinStats(GameState *g) {
     }
 }
 
-// In main.c - Replace the entire AddLeaderboardEntry function with this:
-
 void AddLeaderboardEntry(GameState *g, int winner) {
     if (g->leaderboard_count >= MAX_LEADERBOARD_ENTRIES) {
-        for (int i = 0; i < MAX_LEADERBOARD_ENTRIES - 1; i++) 
+        for (int i = 0; i < MAX_LEADERBOARD_ENTRIES - 1; i++)
             g->leaderboard[i] = g->leaderboard[i + 1];
         g->leaderboard_count = MAX_LEADERBOARD_ENTRIES - 1;
     }
@@ -244,14 +232,13 @@ void AddLeaderboardEntry(GameState *g, int winner) {
     const char *p1_name_str = GetPlayerName(g, 1);
     const char *p2_name_str = GetPlayerName(g, 2);
     
-    if (g->mode == MODE_PVAI) 
-        snprintf(e->entry_name, 64, "%s_vs_Bob", p1_name_str);
-    else if (g->mode == MODE_PVP) 
+    if (g->mode == MODE_PVAI)
         snprintf(e->entry_name, 64, "%s_vs_%s", p1_name_str, p2_name_str);
-    else 
+    else if (g->mode == MODE_PVP)
+        snprintf(e->entry_name, 64, "%s_vs_%s", p1_name_str, p2_name_str);
+    else
         snprintf(e->entry_name, 64, "Flint_vs_Thea");
 
-    // Get the winner's final balance and calculate their score
     e->final_balance = (winner == 1) ? g->p1_balance : g->p2_balance;
     float final_score_winner = CalculateFinalScore(e->final_balance, g->total_moves, true);
     e->total_winnings = final_score_winner;
@@ -270,31 +257,32 @@ void AddLeaderboardEntry(GameState *g, int winner) {
 
 void InitGame(GameState *g) {
     // Save persistent data
-    Account          saved_accounts[MAX_ACCOUNTS];
+    Account saved_accounts[MAX_ACCOUNTS];
     LeaderboardEntry saved_leaderboard[MAX_LEADERBOARD_ENTRIES];
     int saved_account_count = g->account_count;
-    int saved_p1_idx       = g->p1_account_index;
-    int saved_p2_idx       = g->p2_account_index;
-    GameMode saved_mode    = g->mode;
+    int saved_p1_idx = g->p1_account_index;
+    int saved_p2_idx = g->p2_account_index;
+    GameMode saved_mode = g->mode;
     int saved_leaderboard_count = g->leaderboard_count;
+    AIType saved_opponent_ai = g->selected_opponent_ai;
 
-    memcpy(saved_accounts,     g->accounts,     sizeof(saved_accounts));
+    memcpy(saved_accounts, g->accounts, sizeof(saved_accounts));
     memcpy(saved_leaderboard, g->leaderboard, sizeof(saved_leaderboard));
 
     // FULL CLEAN RESET
     *g = (GameState){0};
 
     // Restore persistent data
-    memcpy(g->accounts,     saved_accounts,     sizeof(saved_accounts));
+    memcpy(g->accounts, saved_accounts, sizeof(saved_accounts));
     memcpy(g->leaderboard, saved_leaderboard, sizeof(saved_leaderboard));
-    g->account_count       = saved_account_count;
-    g->p1_account_index    = saved_p1_idx;
-    g->p2_account_index    = saved_p2_idx;
-    g->mode                = saved_mode;
-    g->leaderboard_count   = saved_leaderboard_count;
+    g->account_count = saved_account_count;
+    g->p1_account_index = saved_p1_idx;
+    g->p2_account_index = saved_p2_idx;
+    g->mode = saved_mode;
+    g->leaderboard_count = saved_leaderboard_count;
+    g->selected_opponent_ai = saved_opponent_ai;
 
-
-    // === BUILD DECK ===
+    // Build deck
     Rank keys[5] = {RANK_ACE, RANK_KING, RANK_QUEEN, RANK_JACK, RANK_10};
     int idx = 0;
     
@@ -358,19 +346,11 @@ void InitGame(GameState *g) {
     g->p1_selected = g->p2_selected = false;
 }
 
-
-
-// src/main.c
-void RestartGameKeepingAccounts(GameState *g)
-{
-    // Your existing code is fine, but ADD this at end:
+void RestartGameKeepingAccounts(GameState *g) {
+    InitGame(g);
     g->p1_balance = (g->p1_account_index != -1) ? (float)g->accounts[g->p1_account_index].balance : 10.0f;
     g->p2_balance = (g->p2_account_index != -1) ? (float)g->accounts[g->p2_account_index].balance : 10.0f;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  MAIN
-// ─────────────────────────────────────────────────────────────────────────────
 
 int main(void) {
     srand((unsigned)time(NULL));
@@ -388,6 +368,8 @@ int main(void) {
     LoadLeaderboard(&g);
     InitGame(&g);
     g.state = STATE_MAIN_MENU;
+    g.account_status_message[0] = '\0';
+    g.account_status_timer = 0.0;
 
     while (!WindowShouldClose()) {
         Vector2 mouse = GetMousePosition();
@@ -398,14 +380,28 @@ int main(void) {
 
         // Menu/Restart button handling
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-            if (CheckCollisionPointRec(mouse, menu_btn_rect) && 
-                (game_active || g.state == STATE_GAME_OVER || g.state == STATE_LEADERBOARD || 
-                 g.state == STATE_ACCOUNTS_MANAGER || g.state == STATE_ACCOUNT_CREATE)) {
+            if (CheckCollisionPointRec(mouse, menu_btn_rect) &&
+                (game_active || g.state == STATE_GAME_OVER || g.state == STATE_LEADERBOARD ||
+                 g.state == STATE_ACCOUNTS_MANAGER || g.state == STATE_ACCOUNT_CREATE || g.state == STATE_SETTINGS)) {
+                // FIX: Save balances before returning to menu
+                if (game_active) {
+                    if (g.p1_account_index != -1)
+                        g.accounts[g.p1_account_index].balance = (double)g.p1_balance;
+                    if (g.p2_account_index != -1)
+                        g.accounts[g.p2_account_index].balance = (double)g.p2_balance;
+                    SaveAllAccounts(&g);
+                }
                 g.state = STATE_MAIN_MENU;
             }
-            if (CheckCollisionPointRec(mouse, restart_btn_rect) && 
-                (game_active || g.state == STATE_GAME_OVER)) {
-InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
+            if (CheckCollisionPointRec(mouse, restart_btn_rect) && (game_active || g.state == STATE_GAME_OVER)) {
+                // FIX: Save balances before restarting
+                if (g.p1_account_index != -1)
+                    g.accounts[g.p1_account_index].balance = (double)g.p1_balance;
+                if (g.p2_account_index != -1)
+                    g.accounts[g.p2_account_index].balance = (double)g.p2_balance;
+                SaveAllAccounts(&g);
+                RestartGameKeepingAccounts(&g);
+                g.state = STATE_P1_SELECT_DISCARD;
             }
             if (g.state == STATE_LEADERBOARD && !CheckCollisionPointRec(mouse, menu_btn_rect)) {
                 g.state = STATE_MAIN_MENU;
@@ -415,6 +411,9 @@ InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
         // State updates
         if (g.state == STATE_MAIN_MENU) {
             UpdateMainMenu(&g, mouse);
+        }
+        else if (g.state == STATE_SETTINGS) {
+            UpdateSettings(&g, mouse);
         }
         else if (g.state == STATE_ACCOUNTS_MANAGER) {
             UpdateAccountsManager(&g, mouse);
@@ -426,11 +425,11 @@ InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
             g.revealed_p1 = g.player1_hand[g.p1_discard_idx];
             g.revealed_p2 = g.player2_hand[g.p2_discard_idx];
             
-            for (int i = g.p1_discard_idx; i < g.p1_hand_size - 1; i++) 
+            for (int i = g.p1_discard_idx; i < g.p1_hand_size - 1; i++)
                 g.player1_hand[i] = g.player1_hand[i + 1];
             g.p1_hand_size--;
 
-            for (int i = g.p2_discard_idx; i < g.p2_hand_size - 1; i++) 
+            for (int i = g.p2_discard_idx; i < g.p2_hand_size - 1; i++)
                 g.player2_hand[i] = g.player2_hand[i + 1];
             g.p2_hand_size--;
 
@@ -445,55 +444,50 @@ InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
             if (g.placement_phases_count % 3 == 0) RefreshHands(&g);
             g.state = STATE_CHECK_WIN;
         }
-else if (g.state == STATE_CHECK_WIN) {
-    UpdateWinStats(&g);
-    if (g.p1_completed_ranks >= 3 || g.p2_completed_ranks >= 3) {
-        g.winner = (g.p1_completed_ranks >= 3) ? 1 : 2;
-        g.game_over = true;
-        g.state = STATE_GAME_OVER;
-        g.win_timer_start = GetTime();
-        
-        // Calculate final scores with move bonuses/penalties
-        g.final_score_p1 = CalculateFinalScore(g.p1_balance, g.total_moves, g.winner == 1);
-        g.final_score_p2 = CalculateFinalScore(g.p2_balance, g.total_moves, g.winner == 2);
-        
-        // Update the actual balances for saving
-        g.p1_balance = g.final_score_p1;
-        g.p2_balance = g.final_score_p2;
-        
-        // Save to accounts (works for both human and AI accounts)
-        UpdateAccountBalances(&g);
-        
-        AddLeaderboardEntry(&g, g.winner);
-    } else {
-        g.revealed_p1 = BlankCard();
-        g.revealed_p2 = BlankCard();
-        g.state = STATE_P1_SELECT_DISCARD;
-    }
-}
+        else if (g.state == STATE_CHECK_WIN) {
+            UpdateWinStats(&g);
+            if (g.p1_completed_ranks >= 3 || g.p2_completed_ranks >= 3) {
+                g.winner = (g.p1_completed_ranks >= 3) ? 1 : 2;
+                g.game_over = true;
+                g.state = STATE_GAME_OVER;
+                g.win_timer_start = GetTime();
+                
+                g.final_score_p1 = CalculateFinalScore(g.p1_balance, g.total_moves, g.winner == 1);
+                g.final_score_p2 = CalculateFinalScore(g.p2_balance, g.total_moves, g.winner == 2);
+                
+                g.p1_balance = g.final_score_p1;
+                g.p2_balance = g.final_score_p2;
+                
+                UpdateAccountBalances(&g);
+                AddLeaderboardEntry(&g, g.winner);
+            } else {
+                g.revealed_p1 = BlankCard();
+                g.revealed_p2 = BlankCard();
+                g.state = STATE_P1_SELECT_DISCARD;
+            }
+        }
         else if (g.state == STATE_GAME_OVER) {
             if (IsKeyPressed(KEY_R)) {
-InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
+                RestartGameKeepingAccounts(&g);
+                g.state = STATE_P1_SELECT_DISCARD;
             }
             if (GetTime() - g.win_timer_start > 10.0) {
-InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
+                RestartGameKeepingAccounts(&g);
+                g.state = STATE_P1_SELECT_DISCARD;
             }
         }
 
         // Game logic
         if (game_active) {
-            // AI discard selection
             if (g.mode == MODE_AIVSAI && g.state == STATE_P1_SELECT_DISCARD) {
                 AI_SelectDiscard(&g, 1);
                 g.state = STATE_P2_SELECT_DISCARD;
             }
-            if (g.state == STATE_P2_SELECT_DISCARD && 
-                (g.mode == MODE_PVAI || g.mode == MODE_AIVSAI)) {
+            if (g.state == STATE_P2_SELECT_DISCARD && (g.mode == MODE_PVAI || g.mode == MODE_AIVSAI)) {
                 AI_SelectDiscard(&g, 2);
                 g.state = STATE_REVEAL_AND_RESOLVE;
             }
 
-            // AI placement
             if (g.state == STATE_WAIT_FOR_TURN) {
                 if (g.mode == MODE_AIVSAI && !g.p1_done_placing) {
                     AI_UpdatePlacementPhase(&g, 1);
@@ -509,10 +503,8 @@ InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
                 }
             }
 
-            // Human input
             bool skip_placement_pressed = IsKeyPressed(KEY_SPACE);
-            if (CheckCollisionPointRec(mouse, skip_btn_rect) && 
-                IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            if (CheckCollisionPointRec(mouse, skip_btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 skip_placement_pressed = true;
             }
 
@@ -522,12 +514,10 @@ InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
                 float reward1 = REWARD_PLACEMENT * mult1;
                 float reward2 = REWARD_PLACEMENT * mult2;
 
-                // P1 placement (human)
                 if (g.mode != MODE_AIVSAI && !g.p1_done_placing) {
                     for (int i = 0; i < g.p1_hand_size; i++) {
                         Rectangle card_rect = HandRect(1, i);
-                        if (CheckCollisionPointRec(mouse, card_rect) && 
-                            IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                        if (CheckCollisionPointRec(mouse, card_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                             Card c = g.player1_hand[i];
                             if (c.suit != SUIT_HEARTS && c.rank != RANK_JOKER) {
                                 bool placed = false;
@@ -561,12 +551,10 @@ InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
                     if (skip_placement_pressed) g.p1_done_placing = true;
                 }
 
-                // P2 placement (human in PvP)
                 if (g.mode == MODE_PVP && !g.p2_done_placing) {
                     for (int i = 0; i < g.p2_hand_size; i++) {
                         Rectangle card_rect = HandRect(2, i);
-                        if (CheckCollisionPointRec(mouse, card_rect) && 
-                            IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                        if (CheckCollisionPointRec(mouse, card_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                             Card c = g.player2_hand[i];
                             if (c.suit != SUIT_HEARTS && c.rank != RANK_JOKER) {
                                 bool placed = false;
@@ -602,7 +590,7 @@ InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
             }
 
             // Human discard selection
-            if ((g.state == STATE_P1_SELECT_DISCARD && g.mode != MODE_AIVSAI) || 
+            if ((g.state == STATE_P1_SELECT_DISCARD && g.mode != MODE_AIVSAI) ||
                 (g.state == STATE_P2_SELECT_DISCARD && g.mode == MODE_PVP)) {
                 int player = (g.state == STATE_P1_SELECT_DISCARD) ? 1 : 2;
                 int hand_size = (player == 1) ? g.p1_hand_size : g.p2_hand_size;
@@ -612,8 +600,7 @@ InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
                 if (!*selected_ptr) {
                     for (int i = 0; i < hand_size; i++) {
                         Rectangle btn_rect = ButtonRect(player, i);
-                        if (CheckCollisionPointRec(mouse, btn_rect) && 
-                            IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                        if (CheckCollisionPointRec(mouse, btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                             *idx_ptr = i;
                             *selected_ptr = true;
                             if (g.state == STATE_P1_SELECT_DISCARD)
@@ -629,13 +616,16 @@ InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
 
         // Drawing
         BeginDrawing();
-        if (g_background_texture.id) 
+        if (g_background_texture.id)
             DrawTexture(g_background_texture, 0, 0, RAYWHITE);
-        else 
+        else
             ClearBackground(RAYWHITE);
 
         if (g.state == STATE_MAIN_MENU) {
             DrawMainMenu(&g);
+        }
+        else if (g.state == STATE_SETTINGS) {
+            DrawSettings(&g);
         }
         else if (g.state == STATE_ACCOUNTS_MANAGER) {
             DrawAccountsManager(&g);
@@ -655,8 +645,7 @@ InitGame(&g);                g.state = STATE_P1_SELECT_DISCARD;
             if (g.state == STATE_WAIT_FOR_TURN && g.mode != MODE_AIVSAI) {
                 bool skip_hover = CheckCollisionPointRec(mouse, skip_btn_rect);
                 DrawRectangleRec(skip_btn_rect, skip_hover ? GOLD : ORANGE);
-                DrawText("CONTINUE", 
-                         (int)skip_btn_rect.x + 15, (int)skip_btn_rect.y + 20, 25, BLACK);
+                DrawText("CONTINUE", (int)skip_btn_rect.x + 15, (int)skip_btn_rect.y + 20, 25, BLACK);
             }
             
             bool menu_hover = CheckCollisionPointRec(mouse, menu_btn_rect);
