@@ -1,0 +1,31 @@
+{
+	"accounts":	[{
+			"first_name":	"BOB",
+			"last_name":	"",
+			"balance":	0,
+			"wins":	0,
+			"losses":	0,
+			"is_ai":	true
+		}, {
+			"first_name":	"FLINT",
+			"last_name":	"",
+			"balance":	-3089.115234375,
+			"wins":	1,
+			"losses":	10,
+			"is_ai":	true
+		}, {
+			"first_name":	"THEA",
+			"last_name":	"",
+			"balance":	3474.5849609375,
+			"wins":	10,
+			"losses":	1,
+			"is_ai":	true
+		}, {
+			"first_name":	"mike",
+			"last_name":	"rotch",
+			"balance":	0,
+			"wins":	0,
+			"losses":	0,
+			"is_ai":	false
+		}]
+}

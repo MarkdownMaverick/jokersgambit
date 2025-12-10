@@ -18,7 +18,7 @@ CFLAGS   := -Wall -Wextra -Wpedantic -O2 -march=native -pipe \
             -I. -I$(SRC_DIR)              # include project root + src/ for headers
 
 # Use pkg-config for raylib (cleanest way on Arch/Manjaro)
-LDFLAGS  := $(shell pkg-config --libs raylib) -lm
+LDFLAGS  := $(shell pkg-config --libs raylib) -lm -lcjson
 
 # ── Rules ───────────────────────────────────────────────────
 .PHONY: all run clean edit watch remove_data
@@ -26,10 +26,7 @@ LDFLAGS  := $(shell pkg-config --libs raylib) -lm
 # Make 'all' run 'remove_data' BEFORE building the target
 all: remove_data $(TARGET)
 
-#  rule to forcefully delete the persistent data files
-# remove_data:
-# 	@echo "Removing user data files (accounts.txt and leader.txt) for clean start..."
-# @rm -f accounts.txt leader.txt
+
 
 # Link final executable
 $(TARGET): $(OBJECTS)

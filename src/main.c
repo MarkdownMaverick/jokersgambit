@@ -134,7 +134,7 @@ static void TriggerSweep(GameState *g, int player) {
     }
 }
 
-static void HandleBrokenHearts(GameState *g) {
+static void JokersGambit(GameState *g) {
     TriggerSweep(g, 0);
     for (int i = 0; i < g->p1_hand_size; i++) ReturnToDeck(g, g->player1_hand[i]);
     for (int i = 0; i < g->p2_hand_size; i++) ReturnToDeck(g, g->player2_hand[i]);
@@ -146,6 +146,7 @@ static void HandleBrokenHearts(GameState *g) {
     g->p1_hand_size = g->p2_hand_size = HAND_SIZE;
 }
 
+// REPLACE the existing STATE_WAIT_FOR_TURN initialization in ResolveDiscards with:
 void ResolveDiscards(GameState *g) {
     Card d1 = g->revealed_p1;
     Card d2 = g->revealed_p2;
@@ -159,7 +160,7 @@ void ResolveDiscards(GameState *g) {
     float mult2 = GetRewardMultiplier(g->p2_completed_ranks);
 
     if (j1 && j2) {
-        HandleBrokenHearts(g);
+        JokersGambit(g);
         g->p1_balance -= PENALTY_JOKER;
         g->p2_balance -= PENALTY_JOKER;
         g->p1_balance += (REWARD_DOUBLE_JOKER * mult1);
@@ -193,6 +194,9 @@ void ResolveDiscards(GameState *g) {
     g->p1_done_placing = false;
     g->p2_done_placing = false;
     g->total_moves++;
+    
+    // Keep revealed cards visible during placement phase
+    // They will be hidden when transitioning to next discard phase
 }
 
 void RefreshHands(GameState *g) {
@@ -255,6 +259,7 @@ void AddLeaderboardEntry(GameState *g, int winner) {
     SaveLeaderboard(g);
 }
 
+
 void InitGame(GameState *g) {
     // Save persistent data
     Account saved_accounts[MAX_ACCOUNTS];
@@ -282,7 +287,7 @@ void InitGame(GameState *g) {
     g->leaderboard_count = saved_leaderboard_count;
     g->selected_opponent_ai = saved_opponent_ai;
 
-    // Build deck
+    // Build deck (existing code continues...)
     Rank keys[5] = {RANK_ACE, RANK_KING, RANK_QUEEN, RANK_JACK, RANK_10};
     int idx = 0;
     
@@ -328,13 +333,34 @@ void InitGame(GameState *g) {
     }
     g->p1_hand_size = g->p2_hand_size = HAND_SIZE;
 
-    // LOAD BALANCES FROM PERSISTENT ACCOUNTS
-    g->p1_balance = (g->p1_account_index != -1)
-        ? (float)g->accounts[g->p1_account_index].balance
-        : 10.0f;
-    g->p2_balance = (g->p2_account_index != -1)
-        ? (float)g->accounts[g->p2_account_index].balance
-        : 10.0f;
+    // FIX: Load balances correctly for both human and AI accounts
+    // Player 1 balance
+    if (g->p1_account_index != -1) {
+        g->p1_balance = (float)g->accounts[g->p1_account_index].balance;
+    } else {
+        g->p1_balance = 10.0f;
+    }
+    
+    // Player 2 balance - check if it's PvAI mode and load selected AI's balance
+    if (g->p2_account_index != -1) {
+        g->p2_balance = (float)g->accounts[g->p2_account_index].balance;
+    } else if (g->mode == MODE_PVAI) {
+        // Find the AI account matching the selected opponent
+        for (int i = 0; i < g->account_count; i++) {
+            if (g->accounts[i].is_ai && g->accounts[i].ai_type == g->selected_opponent_ai) {
+                g->p2_balance = (float)g->accounts[i].balance;
+                g->p2_account_index = i; // Auto-login the AI
+                g->accounts[i].is_logged_in = true;
+                break;
+            }
+        }
+        // Fallback if AI not found
+        if (g->p2_account_index == -1) {
+            g->p2_balance = 10.0f;
+        }
+    } else {
+        g->p2_balance = 10.0f;
+    }
 
     // Reset round state
     g->state = STATE_P1_SELECT_DISCARD;
@@ -345,7 +371,6 @@ void InitGame(GameState *g) {
     g->game_over = false;
     g->p1_selected = g->p2_selected = false;
 }
-
 void RestartGameKeepingAccounts(GameState *g) {
     InitGame(g);
     g->p1_balance = (g->p1_account_index != -1) ? (float)g->accounts[g->p1_account_index].balance : 10.0f;
@@ -442,6 +467,8 @@ int main(void) {
         else if (g.state == STATE_BLOCK_DECAY) {
             g.placement_phases_count++;
             if (g.placement_phases_count % 3 == 0) RefreshHands(&g);
+            g.revealed_p1 = BlankCard();
+            g.revealed_p2 = BlankCard();
             g.state = STATE_CHECK_WIN;
         }
         else if (g.state == STATE_CHECK_WIN) {

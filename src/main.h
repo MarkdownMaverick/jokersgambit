@@ -13,7 +13,7 @@
 //  CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 #define SCREEN_W 1900
-#define SCREEN_H 1100
+#define SCREEN_H 1080
 #define SPEED_BONUS_BASE 50.00f 
 #define IDEAL_MOVES 50          
 #define BONUS_CAP 100.00f

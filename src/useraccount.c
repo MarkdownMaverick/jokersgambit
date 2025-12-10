@@ -3,12 +3,11 @@
 #include "useraccount.h"
 #include <string.h>
 #include <stdio.h>
-
-#define ACCOUNTS_FILE "accounts.txt"
-#define LEADERBOARD_FILE "leader.txt"
+#include <cjson/cJSON.h>
+#define ACCOUNTS_FILE "accounts.json"
+#define LEADERBOARD_FILE "leaderboard.json"
 
 // Array of permanent AI names
-static const char *AI_NAMES[] = {"BOB", "THEA", "FLINT"};
 #define NUM_AI_ACCOUNTS (sizeof(AI_NAMES) / sizeof(AI_NAMES[0]))
 
 // Utility function to check if a character is an alphabet letter
@@ -33,143 +32,135 @@ void InitAccounts(GameState *g) {
     }
 }
 
-// src/useraccount.c — FIXED LoadAllAccounts (now parses W: L:)
 void LoadAllAccounts(GameState *g)
 {
-    InitAccounts(g);  // Reset
+    InitAccounts(g);
 
     FILE *f = fopen(ACCOUNTS_FILE, "r");
     if (!f)
     {
-        // Create default AI
-        for (int i = 0; i < NUM_AI_ACCOUNTS; i++)
-        {
-            Account *a = &g->accounts[g->account_count++];
-            strncpy(a->first_name, AI_NAMES[i], MAX_ACCOUNT_NAME_LEN);
-            a->first_name[MAX_ACCOUNT_NAME_LEN] = '\0';
-            a->last_name[0] = '\0';
-            a->balance = 10.00;
-            a->wins = 0;
-            a->losses = 0;
-            a->is_ai = true;
-            a->is_active = true;
-        }
-        SaveAllAccounts(g);  // Save defaults
+        // your existing "create default AI + SaveAllAccounts" block can stay here
+        // ...
         return;
     }
 
-    char line[256];
-    while (fgets(line, sizeof(line), f) && g->account_count < MAX_ACCOUNTS)
-    {
-        char first[MAX_ACCOUNT_NAME_LEN + 1] = {0};
-        char last[MAX_ACCOUNT_NAME_LEN + 1]  = {0};
-        double balance = 0.0;
-        int wins = 0, losses = 0;
-        int is_ai = 0;
+    // read whole file into buffer
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-        // Human: "jimmy choose: $ -80.00 W:0 L:1"
-        // AI: "BOB AI: $100.00 W:1 L:0"
-        int fields = sscanf(line, "%12s %12[^:]: $%lf W:%d L:%d",
-                            first, last, &balance, &wins, &losses);
+    char *buffer = (char *)malloc(size + 1);
+    if (!buffer) { fclose(f); return; }
 
-        if (fields >= 4)  // At least name + balance + W + L
-        {
-            Account *a = &g->accounts[g->account_count];
-
-            // First name always
-            strncpy(a->first_name, first, MAX_ACCOUNT_NAME_LEN);
-            a->first_name[MAX_ACCOUNT_NAME_LEN] = '\0';
-
-            // Detect AI vs Human
-            if (strcmp(last, "AI") == 0)
-            {
-                a->last_name[0] = '\0';  // AI has no last
-                is_ai = 1;
-            }
-            else
-            {
-                // Human: last is the last name
-                const char *src = last;
-                if (src[0] == ' ') src++;  // Skip space if any
-                strncpy(a->last_name, src, MAX_ACCOUNT_NAME_LEN);
-                 a->last_name[MAX_ACCOUNT_NAME_LEN] = '\0';
-            }
-
-            a->balance = balance;
-            a->wins = wins;
-            a->losses = losses;
-            a->is_ai = is_ai;
-            a->is_active = true;
-
-            g->account_count++;
-        }
-    }
+    size_t read_bytes = fread(buffer, 1, size, f);
+    buffer[read_bytes] = '\0';
     fclose(f);
 
-    // Fallback if empty
-    if (g->account_count == 0)
+    // parse JSON
+    cJSON *root = cJSON_Parse(buffer);
+    free(buffer);
+    if (!root)
     {
-        // Recreate AI
-        for (int i = 0; i < NUM_AI_ACCOUNTS; i++)
-        {
-            Account *a = &g->accounts[g->account_count++];
-            strncpy(a->first_name, AI_NAMES[i], MAX_ACCOUNT_NAME_LEN);
-            a->first_name[MAX_ACCOUNT_NAME_LEN] = '\0';
-            a->last_name[0] = '\0';
-            a->balance = 10.00;
-            a->wins = 0;
-            a->losses = 0;
-            a->is_ai = true;
-            
-            // Set AI type based on name
-            if (strcmp(AI_NAMES[i], "BOB") == 0) a->ai_type = AI_BOB;
-            else if (strcmp(AI_NAMES[i], "THEA") == 0) a->ai_type = AI_THEA;
-            else if (strcmp(AI_NAMES[i], "FLINT") == 0) a->ai_type = AI_FLINT;
-            
-            a->is_active = true;
-        }
-        SaveAllAccounts(g);
+        // parsing failed: you can recreate defaults like you already do
+        // ...
+        return;
     }
-    
-    // DEFAULT BOB LOGIN: Only on application start (p2_account_index will be -1 on first load)
-    if (g->p2_account_index == -1)
+
+    cJSON *arr = cJSON_GetObjectItem(root, "accounts");
+    if (!cJSON_IsArray(arr))
     {
-        for (int i = 0; i < g->account_count; i++)
-        {
-            if (g->accounts[i].is_ai && strcmp(g->accounts[i].first_name, "BOB") == 0)
-            {
-                LoginAccount(g, i, 2);
-                TraceLog(LOG_INFO, "Default: BOB auto-logged into P2 slot");
-                break;
-            }
-        }
+        cJSON_Delete(root);
+        // optionally recreate defaults
+        return;
     }
+
+    g->account_count = 0;
+
+    cJSON *elem = NULL;
+    cJSON_ArrayForEach(elem, arr)
+    {
+        if (g->account_count >= MAX_ACCOUNTS) break;
+
+        cJSON *jn = cJSON_GetObjectItem(elem, "first_name");
+        cJSON *jl = cJSON_GetObjectItem(elem, "last_name");
+        cJSON *jb = cJSON_GetObjectItem(elem, "balance");
+        cJSON *jw = cJSON_GetObjectItem(elem, "wins");
+        cJSON *jlost = cJSON_GetObjectItem(elem, "losses");
+        cJSON *jai = cJSON_GetObjectItem(elem, "is_ai");
+
+        if (!cJSON_IsString(jn) || !cJSON_IsString(jl) ||
+            !cJSON_IsNumber(jb) || !cJSON_IsNumber(jw) ||
+            !cJSON_IsNumber(jlost) || !cJSON_IsBool(jai))
+        {
+            continue; // skip malformed entry
+        }
+
+        Account *a = &g->accounts[g->account_count];
+
+        strncpy(a->first_name, jn->valuestring, MAX_ACCOUNT_NAME_LEN);
+        a->first_name[MAX_ACCOUNT_NAME_LEN] = '\0';
+        strncpy(a->last_name, jl->valuestring, MAX_ACCOUNT_NAME_LEN);
+        a->last_name[MAX_ACCOUNT_NAME_LEN] = '\0';
+
+        a->balance = jb->valuedouble;
+        a->wins    = jw->valueint;
+        a->losses  = jlost->valueint;
+        a->is_ai   = cJSON_IsTrue(jai);
+        a->is_active = true;
+
+        // optional: set ai_type based on name, as you already do
+        if (a->is_ai)
+        {
+            if (strcmp(a->first_name, "BOB") == 0)   a->ai_type = AI_BOB;
+            else if (strcmp(a->first_name, "THEA") == 0)  a->ai_type = AI_THEA;
+            else if (strcmp(a->first_name, "FLINT") == 0) a->ai_type = AI_FLINT;
+        }
+
+        g->account_count++;
+    }
+
+    cJSON_Delete(root);
+
+    // you can keep your "fallback recreate AI if g->account_count == 0" and
+    // "default BOB login" logic unchanged below this point
 }
 
-// src/useraccount.c — FIXED SaveAllAccounts (format as requested)
 void SaveAllAccounts(const GameState *g)
 {
-    FILE *f = fopen(ACCOUNTS_FILE, "w");
-    if (!f) return;
+    // build JSON root and array
+    cJSON *root = cJSON_CreateObject();
+    cJSON *arr  = cJSON_CreateArray();
+    cJSON_AddItemToObject(root, "accounts", arr);
 
     for (int i = 0; i < g->account_count; i++)
     {
         const Account *a = &g->accounts[i];
-        if (a->is_active)
-        {
-            if (a->is_ai)
-            {
-                fprintf(f, "%s AI: $%.2lf W:%d L:%d\n",
-                        a->first_name, a->balance, a->wins, a->losses);
-            }
-            else
-            {
-                fprintf(f, "%s %s: $%.2lf W:%d L:%d\n",
-                        a->first_name, a->last_name, a->balance, a->wins, a->losses);
-            }
-        }
+        if (!a->is_active) continue;
+
+        cJSON *obj = cJSON_CreateObject();
+        cJSON_AddStringToObject(obj, "first_name", a->first_name);
+        cJSON_AddStringToObject(obj, "last_name",  a->last_name);
+        cJSON_AddNumberToObject(obj, "balance",    a->balance);
+        cJSON_AddNumberToObject(obj, "wins",       a->wins);
+        cJSON_AddNumberToObject(obj, "losses",     a->losses);
+        cJSON_AddBoolToObject(obj,   "is_ai",      a->is_ai ? 1 : 0);
+
+        cJSON_AddItemToArray(arr, obj);
     }
-    fclose(f);
+
+    // convert to string
+    char *json_str = cJSON_Print(root);   // or cJSON_PrintUnformatted(root);
+
+    FILE *f = fopen(ACCOUNTS_FILE, "w");
+    if (f)
+    {
+        fputs(json_str, f);
+        fclose(f);
+    }
+
+    // cleanup
+    cJSON_free(json_str);   // or free(), depending on your cJSON version
+    cJSON_Delete(root);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -177,52 +168,94 @@ void SaveAllAccounts(const GameState *g)
 // ─────────────────────────────────────────────────────────────────────────────
 
 void LoadLeaderboard(GameState *g) {
-    // FIX: Declare FILE pointer 'f' and open file
-    FILE *f = fopen(LEADERBOARD_FILE, "r"); 
+    FILE *f = fopen(LEADERBOARD_FILE, "r");
     if (!f) {
         TraceLog(LOG_WARNING, "LEADERBOARD: File not found. Skipping load.");
         g->leaderboard_count = 0;
+        g->leaderboard_loaded = false;
         return;
     }
 
-    // FIX: Declare temporary line buffer 'line'
-    char line[256]; 
-    g->leaderboard_count = 0;
+    // read whole file
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fseek(f, 0, SEEK_SET);
 
-    while (fgets(line, sizeof(line), f) && g->leaderboard_count < MAX_LEADERBOARD_ENTRIES) {
-        LeaderboardEntry *e = &g->leaderboard[g->leaderboard_count];
-        
-        // FIX: Use the new member names: e->total_winnings and e->entry_name
-        int scanned = sscanf(line, "Score: %f - Name: %127[^\n]", &e->total_winnings, e->entry_name); 
+    char *buffer = (char *)malloc(size + 1);
+    if (!buffer) { fclose(f); return; }
+    size_t read_bytes = fread(buffer, 1, size, f);
+    buffer[read_bytes] = '\0';
+    fclose(f);
 
-        if (scanned == 2) {
-            // Null-terminate entry_name to be safe
-            e->entry_name[MAX_LEADERBOARD_ENTRY_NAME_LEN - 1] = '\0';
-            g->leaderboard_count++;
-        }
+    cJSON *root = cJSON_Parse(buffer);
+    free(buffer);
+    if (!root) {
+        TraceLog(LOG_WARNING, "LEADERBOARD: JSON parse failed.");
+        g->leaderboard_count = 0;
+        g->leaderboard_loaded = false;
+        return;
     }
 
-    fclose(f);
+    cJSON *arr = cJSON_GetObjectItem(root, "leaderboard");
+    if (!cJSON_IsArray(arr)) {
+        cJSON_Delete(root);
+        g->leaderboard_count = 0;
+        g->leaderboard_loaded = false;
+        return;
+    }
+
+    g->leaderboard_count = 0;
+
+    cJSON *elem = NULL;
+    cJSON_ArrayForEach(elem, arr) {
+        if (g->leaderboard_count >= MAX_LEADERBOARD_ENTRIES) break;
+
+        cJSON *js = cJSON_GetObjectItem(elem, "score");
+        cJSON *jn = cJSON_GetObjectItem(elem, "name");
+        if (!cJSON_IsNumber(js) || !cJSON_IsString(jn)) continue;
+
+        LeaderboardEntry *e = &g->leaderboard[g->leaderboard_count];
+        e->total_winnings = (float)js->valuedouble;
+
+        strncpy(e->entry_name, jn->valuestring,
+                MAX_LEADERBOARD_ENTRY_NAME_LEN - 1);
+        e->entry_name[MAX_LEADERBOARD_ENTRY_NAME_LEN - 1] = '\0';
+
+        g->leaderboard_count++;
+    }
+
+    cJSON_Delete(root);
     g->leaderboard_loaded = true;
 }
 
+
 void SaveLeaderboard(const GameState *g) {
-    // FIX: Declare FILE pointer 'f' and open file for writing
-    FILE *f = fopen(LEADERBOARD_FILE, "w"); 
-    if (!f) {
-        TraceLog(LOG_ERROR, "LEADERBOARD: Failed to open for writing.");
-        return;
-    }
+    cJSON *root = cJSON_CreateObject();
+    cJSON *arr  = cJSON_CreateArray();
+    cJSON_AddItemToObject(root, "leaderboard", arr);
 
     for (int i = 0; i < g->leaderboard_count; i++) {
         const LeaderboardEntry *e = &g->leaderboard[i];
-        // Save format: "Score: 12.34 - Name: P1 vs P2"
-        // FIX: Use the new member names: e->total_winnings and e->entry_name
-        fprintf(f, "Score: %.2f - Name: %s\n", e->total_winnings, e->entry_name);
+
+        cJSON *obj = cJSON_CreateObject();
+        cJSON_AddNumberToObject(obj, "score", e->total_winnings);
+        cJSON_AddStringToObject(obj, "name",  e->entry_name);
+
+        cJSON_AddItemToArray(arr, obj);
     }
 
-    fclose(f);
+    char *json_str = cJSON_Print(root);   // or cJSON_PrintUnformatted(root)
+
+    FILE *f = fopen(LEADERBOARD_FILE, "w");
+    if (f) {
+        fputs(json_str, f);
+        fclose(f);
+    }
+
+    cJSON_free(json_str);   // or free(), depending on your cJSON build
+    cJSON_Delete(root);
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  ACCOUNT MANAGEMENT LOGIC

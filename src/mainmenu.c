@@ -117,7 +117,7 @@ void UpdateMainMenu(GameState *g, Vector2 mouse) {
 
 void DrawSettings(GameState *g) {
     DrawText("SETTINGS", CENTER_X - 200, 100, 80, GOLD);
-    
+
     DrawText("Select AI Opponent for PvAI Mode:", CENTER_X - 350, 250, 40, WHITE);
     
     // AI Selection Buttons
@@ -184,7 +184,7 @@ void UpdateSettings(GameState *g, Vector2 mouse) {
 // In mainmenu.c
 
 void DrawAccountsManager(const GameState *g) {
-    DrawText("ACCOUNT MANAGER", CENTER_X - 320, 60, 70, GOLD);
+    DrawText("ACCOUNT MANAGER", CENTER_X - 900, 80, 20, GOLD);
 
     // 1. Draw Current Login Status Top Header
     const char *p1 = (g->p1_account_index == -1) ? "---" : GetPlayerName(g, 1);
@@ -228,9 +228,7 @@ void DrawAccountsManager(const GameState *g) {
         float btn_h = 40;
         float start_x = row_rect.x + 600;
         
-        if (!a->is_ai) {
-            // HUMAN CONTROLS: [P1 LOGIN/OUT] [P2 LOGIN/OUT] [DELETE]
-            
+
             // P1 Button
             Rectangle btn_p1 = {start_x, row_rect.y + 30, btn_w, btn_h};
             bool hover_p1 = CheckCollisionPointRec(GetMousePosition(), btn_p1);
@@ -253,22 +251,7 @@ void DrawAccountsManager(const GameState *g) {
             DrawRectangleRec(btn_del, hover_del ? RED : MAROON);
             DrawText("DEL", btn_del.x + 20, btn_del.y + 10, 20, WHITE);
 
-        } else {
-            // AI CONTROLS: [ASSIGN P2] [LOGOUT P2]
-            // We focus on P2 for AI since P1 is usually the human
-            
-            Rectangle btn_ai = {start_x + 160, row_rect.y + 30, btn_w + 40, btn_h};
-            bool hover_ai = CheckCollisionPointRec(GetMousePosition(), btn_ai);
-            
-            if (is_p2) {
-                DrawRectangleRec(btn_ai, hover_ai ? RED : MAROON);
-                DrawText(TextFormat("LOG %s OUT", a->first_name), btn_ai.x + 10, btn_ai.y + 10, 20, WHITE);
-            } else {
-                DrawRectangleRec(btn_ai, hover_ai ? SKYBLUE : BLUE);
-                DrawText(TextFormat("%s P2 SLOT", a->first_name), btn_ai.x + 10, btn_ai.y + 10, 20, WHITE);
-            }
-        }
-
+      
         y += 110;
     }
 
@@ -327,7 +310,7 @@ void UpdateAccountsManager(GameState *g, Vector2 mouse) {
                 }
             }
         } else {
-            // AI BUTTONS (P2 Focus)
+            // AI accounts should be non accessible for the player the player accounts start at index 4
             Rectangle btn_ai = {start_x + 160, row_rect.y + 30, btn_w + 40, btn_h};
             
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mouse, btn_ai)) {
@@ -376,11 +359,11 @@ void DrawAccountCreate(const GameState *g) {
     Color col1 = (current_name_field == 1) ? YELLOW : WHITE;
     Color col2 = (current_name_field == 2) ? YELLOW : WHITE;
 
-    DrawText(label1, CENTER_X - 300, 340, 40, col1);
-    DrawText(label2, CENTER_X + 20, 340, 40, col2);
-
-    Rectangle r1 = {CENTER_X - 300, 400, 280, 70};
-    Rectangle r2 = {CENTER_X + 20, 400, 280, 70};
+     DrawText(label1, CENTER_X - 150, 360, 40, col1);
+     DrawText(label2, CENTER_X - 150, 480, 40, col2);
+     
+     Rectangle r1 = {CENTER_X - 140, 400, 280, 70};
+     Rectangle r2 = {CENTER_X - 140, 520, 280, 70};
 
     DrawRectangleRec(r1, DARKGRAY);
     DrawRectangleLinesEx(r1, 4, col1);
@@ -395,14 +378,16 @@ void DrawAccountCreate(const GameState *g) {
     if (current_name_field == 2 && ((int)(GetTime() * 2) % 2))
         DrawText("_", r2.x + 25 + MeasureText(new_last_name, 40), r2.y + 20, 40, WHITE);
 
-    Rectangle confirm = {CENTER_X - 220, 520, 200, 80};
-    Rectangle cancel = {CENTER_X + 20, 520, 200, 80};
+    Rectangle confirm = {CENTER_X - 220, 820, 200, 80};
+    Rectangle cancel = {CENTER_X + 20, 820, 200, 80};
 
     bool ok = strlen(new_first_name) >= 2 && strlen(new_last_name) >= 2;
     DrawRectangleRec(confirm, ok ? LIME : DARKGREEN);
     DrawRectangleRec(cancel, RED);
     DrawText("CREATE", confirm.x + 40, confirm.y + 25, 35, BLACK);
     DrawText("CANCEL", cancel.x + 40, cancel.y + 25, 35, WHITE);
+    DrawRectangleLines(confirm.x, confirm.y, confirm.width, confirm.height, RED);
+    DrawRectangleLines(cancel.x, cancel.y, cancel.width, cancel.height, BLUE);
 }
 
 void UpdateAccountCreate(GameState *g) {
@@ -428,8 +413,8 @@ void UpdateAccountCreate(GameState *g) {
 
     Vector2 m = GetMousePosition();
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-        Rectangle confirm = {CENTER_X - 220, 520, 200, 80};
-        Rectangle cancel = {CENTER_X + 20, 520, 200, 80};
+        Rectangle confirm = {CENTER_X - 220, 820, 200, 80};
+        Rectangle cancel = {CENTER_X + 20, 820, 200, 80};
 
         if (CheckCollisionPointRec(m, confirm)) {
             if (strlen(new_first_name) >= 2 && strlen(new_last_name) >= 2) {
