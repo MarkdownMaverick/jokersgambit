@@ -312,28 +312,59 @@ void DrawGameLayout(const GameState *g)
         Rectangle key_rect = KeyCardRect(k);
         DrawCard(g->keycards[k], key_rect, RAYWHITE);
 
+        // --- Player 1 Slots ---
         for (int s = 0; s < 3; s++)
         {
             Rectangle slot_rect = SlotRect(1, k, s);
+            
             if (g->p1_slots[k][s].is_valid)
             {
+                // Draw the actual card if valid
                 DrawCard(g->p1_slots[k][s], slot_rect, RAYWHITE);
             }
+            else
+            {
+                // Draw BACK.png as placeholder if slot is empty
+                if (g_card_back_texture.id) 
+                {
+                    DrawTexturePro(g_card_back_texture,
+                        (Rectangle){0, 0, (float)g_card_back_texture.width, (float)g_card_back_texture.height},
+                        slot_rect, (Vector2){0, 0}, 0.0f, Fade(WHITE, 0.25f)); // 0.25f alpha makes it faint
+                }
+            }
         }
+
+        // --- Player 2 Slots ---
         for (int s = 0; s < 3; s++)
         {
             Rectangle slot_rect = SlotRect(2, k, s);
+            
             if (g->p2_slots[k][s].is_valid)
             {
                 DrawCard(g->p2_slots[k][s], slot_rect, RAYWHITE);
             }
+            else
+            {
+                // Draw BACK.png as placeholder if slot is empty
+                if (g_card_back_texture.id) 
+                {
+                    DrawTexturePro(g_card_back_texture,
+                        (Rectangle){0, 0, (float)g_card_back_texture.width, (float)g_card_back_texture.height},
+                        slot_rect, (Vector2){0, 0}, 0.0f, Fade(WHITE, 0.25f)); // 0.25f alpha makes it faint
+                }
+            }
         }
     }
 
-    // 2. Draw Hands & Discard Buttons
+    // 2. Draw Hands & Discard Buttons (Rest of your function...)
+    // ... ensure the rest of the original function stays here ...
     for (int i = 0; i < HAND_SIZE; i++)
     {
-        // --- Player 1 ---
+        // ... (Keep your existing hand drawing code here) ...
+        // If you don't have the rest of the code handy, let me know and I will paste the full function.
+        // Based on your snippet, just ensure you don't delete the code that comes after the loops!
+        
+        // --- Player 1 Hand ---
         Rectangle p1_rect = HandRect(1, i);
         if (i < g->p1_hand_size)
         {
@@ -346,23 +377,17 @@ void DrawGameLayout(const GameState *g)
         const char *p1_text = (g->state == STATE_P1_SELECT_DISCARD) ? "Discard" : "Place";
         DrawButton(ButtonRect(1, i), p1_btn_hovered, p1_btn_enabled, p1_text);
 
-        // --- Player 2 ---
+        // --- Player 2 Hand ---
         Rectangle p2_rect = HandRect(2, i);
         if (i < g->p2_hand_size)
         {
-            // Check if we should cover P2 cards
-            if (g->cover_p2_cards && g->mode != MODE_AIVSAI)
-            {
-                // Draw card back instead
-                if (g_card_back_texture.id)
-                {
+             if (g->cover_p2_cards && g->mode != MODE_AIVSAI) {
+                if (g_card_back_texture.id) {
                     DrawTexturePro(g_card_back_texture,
-                                   (Rectangle){0, 0, (float)g_card_back_texture.width, (float)g_card_back_texture.height},
-                                   p2_rect, (Vector2){0, 0}, 0.0f, RAYWHITE);
+                                 (Rectangle){0, 0, (float)g_card_back_texture.width, (float)g_card_back_texture.height},
+                                 p2_rect, (Vector2){0, 0}, 0.0f, RAYWHITE);
                 }
-            }
-            else
-            {
+            } else {
                 Color tint = (g->p2_selected && i == g->p2_discard_idx) ? PURPLE : RAYWHITE;
                 DrawCard(g->player2_hand[i], p2_rect, tint);
             }
@@ -384,13 +409,7 @@ void DrawGameLayout(const GameState *g)
     }
     DrawText(TextFormat("Deck: %d", g->current_deck_size), (int)deck_rect.x, (int)deck_rect.y + CARD_H_SCALED + 10, 20, BLACK);
 
-    // 4. Draw Discard Piles (Revealed Cards)
-    if (g->revealed_p1.is_valid)
-    {
-        DrawCard(g->revealed_p1, DiscardPileRect(1), RAYWHITE);
-    }
-    if (g->revealed_p2.is_valid)
-    {
-        DrawCard(g->revealed_p2, DiscardPileRect(2), RAYWHITE);
-    }
+    // 4. Draw Discard Piles
+    if (g->revealed_p1.is_valid) DrawCard(g->revealed_p1, DiscardPileRect(1), RAYWHITE);
+    if (g->revealed_p2.is_valid) DrawCard(g->revealed_p2, DiscardPileRect(2), RAYWHITE);
 }
