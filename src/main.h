@@ -14,8 +14,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 #define SCREEN_W 1900
 #define SCREEN_H 1080
-#define SPEED_BONUS_BASE 50.00f 
-#define IDEAL_MOVES 50          
+#define SPEED_BONUS_BASE 50.00f
+#define IDEAL_MOVES 50
 #define BONUS_CAP 100.00f
 
 #define HAND_SIZE 5
@@ -24,11 +24,11 @@
 #define CARD_SCALE 0.65f
 #define CARD_W_SCALED (160 * CARD_SCALE)
 #define CARD_H_SCALED (220 * CARD_SCALE)
-#define AI_MOVE_DELAY 1.0f 
+#define AI_MOVE_DELAY 1.0f
 
 // --- ACCOUNT CONSTANTS ---
 #define MAX_ACCOUNTS 5
-#define MAX_ACCOUNT_NAME_LEN 12 
+#define MAX_ACCOUNT_NAME_LEN 12
 #define MAX_LEADERBOARD_ENTRIES 100
 
 // Monetary Constants
@@ -44,11 +44,11 @@
 #define GRID_START_Y 160
 #define ROW_SPACING 150
 #define KEYCARD_COL_X (CENTER_X - CARD_W_SCALED / 2.0f)
-#define SLOT_SPACING_X (CARD_W_SCALED - 105) 
-#define KEY_TO_SLOT_GAP 1                    
-#define BUTTON_W 80        
-#define BUTTON_H 80        
-#define BUTTON_OFFSET_Y 20 
+#define SLOT_SPACING_X (CARD_W_SCALED - 105)
+#define KEY_TO_SLOT_GAP 1
+#define BUTTON_W 80
+#define BUTTON_H 80
+#define BUTTON_OFFSET_Y 20
 
 #define MAX_LEADERBOARD_ENTRY_NAME_LEN 64
 #define MAX_LEADERBOARD_WINNER_NAME_LEN 32
@@ -58,25 +58,45 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  AI TYPE ENUM
 // ─────────────────────────────────────────────────────────────────────────────
-typedef enum {
-    AI_BOB = 0,    // Original AI: prefers Jokers, then low cards
-    AI_THEA = 1,   // Discards randomly with no Joker preference
-    AI_FLINT = 2   // Never discards Jokers
+typedef enum
+{
+    AI_BOB = 0,
+    AI_THEA = 1,
+    AI_FLINT = 2
 } AIType;
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  DATA TYPES
 // ─────────────────────────────────────────────────────────────────────────────
-typedef enum {
-    RANK_2 = 0, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, RANK_9, RANK_10,
-    RANK_JACK, RANK_QUEEN, RANK_KING, RANK_ACE, RANK_JOKER
+typedef enum
+{
+    RANK_2 = 0,
+    RANK_3,
+    RANK_4,
+    RANK_5,
+    RANK_6,
+    RANK_7,
+    RANK_8,
+    RANK_9,
+    RANK_10,
+    RANK_JACK,
+    RANK_QUEEN,
+    RANK_KING,
+    RANK_ACE,
+    RANK_JOKER
 } Rank;
 
-typedef enum {
-    SUIT_CLUBS, SUIT_DIAMONDS, SUIT_HEARTS, SUIT_SPADES, SUIT_NONE
+typedef enum
+{
+    SUIT_CLUBS,
+    SUIT_DIAMONDS,
+    SUIT_HEARTS,
+    SUIT_SPADES,
+    SUIT_NONE
 } Suit;
 
-typedef struct {
+typedef struct
+{
     Rank rank;
     Suit suit;
     bool is_valid;
@@ -84,7 +104,8 @@ typedef struct {
     char filename[16];
 } Card;
 
-typedef enum {
+typedef enum
+{
     STATE_MAIN_MENU,
     STATE_ACCOUNTS_MANAGER,
     STATE_ACCOUNT_CREATE,
@@ -99,30 +120,39 @@ typedef enum {
     STATE_LEADERBOARD
 } GameStateEnum;
 
-typedef enum { MODE_PVP, MODE_PVAI, MODE_AIVSAI } GameMode;
+typedef enum
+{
+    MODE_PVP,
+    MODE_PVAI,
+    MODE_AIVSAI
+} GameMode;
 
-typedef struct LeaderboardEntry {
+typedef struct LeaderboardEntry
+{
     float total_winnings;
     float final_balance;
     float bonus;
+    int total_moves;
     char entry_name[MAX_LEADERBOARD_ENTRY_NAME_LEN];
     char winner_name[MAX_LEADERBOARD_WINNER_NAME_LEN];
     char timestamp[MAX_LEADERBOARD_TIMESTAMP_LEN];
 } LeaderboardEntry;
 
-typedef struct Account {
+typedef struct Account
+{
     char first_name[MAX_ACCOUNT_NAME_LEN + 1];
     char last_name[MAX_ACCOUNT_NAME_LEN + 1];
     double balance;
     int wins;
     int losses;
     bool is_ai;
-    AIType ai_type;  // NEW: Which AI behavior to use
+    AIType ai_type;
     bool is_active;
     bool is_logged_in;
 } Account;
 
-typedef struct {
+typedef struct
+{
     Card deck[TOTAL_DECK_CARDS];
     int top_card_index;
     int current_deck_size;
@@ -169,21 +199,25 @@ typedef struct {
     int p2_account_index;
     int name_input_target;
 
-    AIType selected_opponent_ai;  // NEW: Selected AI for PvAI mode
+    AIType selected_opponent_ai;
 
     bool game_over;
     int winner;
     float final_score_p1;
     float final_score_p2;
     double win_timer_start;
-    
+
     LeaderboardEntry leaderboard[MAX_LEADERBOARD_ENTRIES];
     int leaderboard_count;
     bool leaderboard_loaded;
-    
+    bool leaderboard_sort_by_moves;
+
     // Account Manager feedback
     char account_status_message[128];
     double account_status_timer;
+
+    // NEW: P2 card cover setting
+    bool cover_p2_cards;
 } GameState;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -206,7 +240,7 @@ void RefreshHands(GameState *g);
 void UpdateWinStats(GameState *g);
 
 // Account/IO prototypes
-const char* GetPlayerName(const GameState *g, int player);
+const char *GetPlayerName(const GameState *g, int player);
 void UpdateAccountBalances(GameState *g);
 void LoadAllAccounts(GameState *g);
 void SaveAllAccounts(const GameState *g);

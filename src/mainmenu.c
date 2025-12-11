@@ -2,9 +2,6 @@
 #include "useraccount.h"
 #include "gui.h"
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  LOCAL STATE FOR ACCOUNT CREATION & ERROR HANDLING
-// ─────────────────────────────────────────────────────────────────────────────
 char new_first_name[MAX_ACCOUNT_NAME_LEN + 1] = {0};
 char new_last_name[MAX_ACCOUNT_NAME_LEN + 1] = {0};
 int current_name_field = 1;
@@ -17,17 +14,16 @@ void ShowAccountStatus(GameState *g, const char *msg) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  MAIN MENU
+//  MAIN MENU - AI vs AI REMOVED
 // ─────────────────────────────────────────────────────────────────────────────
 
 void DrawMainMenu(GameState *g) {
-    (void)g;  // Currently unused but kept for future features
+    (void)g;
     
     Rectangle play_rect = {CENTER_X - 150, 300, 300, 60};
-    Rectangle accounts_rect = {CENTER_X - 150, 380, 300, 60};
-    Rectangle settings_rect = {CENTER_X - 150, 460, 300, 60};
-    Rectangle aivsai_rect = {CENTER_X - 150, 540, 300, 60};
-    Rectangle leaderboard_rect = {CENTER_X - 150, 620, 300, 60};
+    Rectangle accounts_rect = {CENTER_X - 150, 400, 300, 60};
+    Rectangle settings_rect = {CENTER_X - 150, 500, 300, 60};
+    Rectangle leaderboard_rect = {CENTER_X - 150, 600, 300, 60};
     Vector2 mouse = GetMousePosition();
 
     DrawText("JOKERS GAMBIT", CENTER_X - 350, 150, 90, GOLD);
@@ -44,10 +40,6 @@ void DrawMainMenu(GameState *g) {
     DrawRectangleRec(settings_rect, set_hover ? PURPLE : DARKPURPLE);
     DrawText("SETTINGS", (int)settings_rect.x + 75, (int)settings_rect.y + 15, 30, WHITE);
 
-    bool aivsai_hover = CheckCollisionPointRec(mouse, aivsai_rect);
-    DrawRectangleRec(aivsai_rect, aivsai_hover ? ORANGE : ORANGE);
-    DrawText("AI vs AI", (int)aivsai_rect.x + 80, (int)aivsai_rect.y + 15, 30, WHITE);
-
     bool lb_hover = CheckCollisionPointRec(mouse, leaderboard_rect);
     DrawRectangleRec(leaderboard_rect, lb_hover ? YELLOW : GOLD);
     DrawText("LEADERBOARD", (int)leaderboard_rect.x + 30, (int)leaderboard_rect.y + 15, 30, BLACK);
@@ -55,21 +47,29 @@ void DrawMainMenu(GameState *g) {
 
 void UpdateMainMenu(GameState *g, Vector2 mouse) {
     Rectangle play_rect = {CENTER_X - 150, 300, 300, 60};
-    Rectangle accounts_rect = {CENTER_X - 150, 380, 300, 60};
-    Rectangle settings_rect = {CENTER_X - 150, 460, 300, 60};
-    Rectangle aivsai_rect = {CENTER_X - 150, 540, 300, 60};
-    Rectangle leaderboard_rect = {CENTER_X - 150, 620, 300, 60};
+    Rectangle accounts_rect = {CENTER_X - 150, 400, 300, 60};
+    Rectangle settings_rect = {CENTER_X - 150, 500, 300, 60};
+    Rectangle leaderboard_rect = {CENTER_X - 150, 600, 300, 60};
 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
         if (CheckCollisionPointRec(mouse, play_rect)) {
-            if (g->p1_account_index == -1) {
+            // Check if both players are logged in
+            if (g->p1_account_index == -1 || g->p2_account_index == -1) {
+                ShowAccountStatus(g, "Please log in 2 accounts to start");
                 g->state = STATE_ACCOUNTS_MANAGER;
             } else {
-                if (g->p2_account_index == -1) {
-                    g->mode = MODE_PVAI;
-                } else {
+                // Determine game mode based on who's logged in
+                bool p1_is_ai = g->accounts[g->p1_account_index].is_ai;
+                bool p2_is_ai = g->accounts[g->p2_account_index].is_ai;
+                
+                if (!p1_is_ai && !p2_is_ai) {
                     g->mode = MODE_PVP;
+                } else if (p1_is_ai && p2_is_ai) {
+                    g->mode = MODE_AIVSAI;
+                } else {
+                    g->mode = MODE_PVAI;
                 }
+                
                 RestartGameKeepingAccounts(g);
                 g->state = STATE_P1_SELECT_DISCARD;
             }
@@ -80,31 +80,6 @@ void UpdateMainMenu(GameState *g, Vector2 mouse) {
         if (CheckCollisionPointRec(mouse, settings_rect)) {
             g->state = STATE_SETTINGS;
         }
-        if (CheckCollisionPointRec(mouse, aivsai_rect)) {
-            // AI vs AI mode - logout current accounts and login FLINT & THEA
-            LogoutAccount(g, 1);
-            LogoutAccount(g, 2);
-            
-            // Find and login FLINT to P1
-            for (int i = 0; i < g->account_count; i++) {
-                if (g->accounts[i].is_ai && g->accounts[i].ai_type == AI_FLINT) {
-                    LoginAccount(g, i, 1);
-                    break;
-                }
-            }
-            
-            // Find and login THEA to P2
-            for (int i = 0; i < g->account_count; i++) {
-                if (g->accounts[i].is_ai && g->accounts[i].ai_type == AI_THEA) {
-                    LoginAccount(g, i, 2);
-                    break;
-                }
-            }
-            
-            g->mode = MODE_AIVSAI;
-            RestartGameKeepingAccounts(g);
-            g->state = STATE_P1_SELECT_DISCARD;
-        }
         if (CheckCollisionPointRec(mouse, leaderboard_rect)) {
             g->state = STATE_LEADERBOARD;
         }
@@ -112,42 +87,27 @@ void UpdateMainMenu(GameState *g, Vector2 mouse) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SETTINGS SCREEN
+//  SETTINGS SCREEN - AI SELECTION REMOVED, CARD COVER TOGGLE ADDED
 // ─────────────────────────────────────────────────────────────────────────────
 
 void DrawSettings(GameState *g) {
     DrawText("SETTINGS", CENTER_X - 200, 100, 80, GOLD);
 
-    DrawText("Select AI Opponent for PvAI Mode:", CENTER_X - 350, 250, 40, WHITE);
+    // Card Cover Toggle
+    DrawText("P2 Card Privacy:", CENTER_X - 300, 300, 40, WHITE);
     
-    // AI Selection Buttons
-    Rectangle bob_rect = {CENTER_X - 400, 350, 220, 80};
-    Rectangle thea_rect = {CENTER_X - 110, 350, 220, 80};
-    Rectangle flint_rect = {CENTER_X + 180, 350, 220, 80};
-    
+    Rectangle cover_btn_rect = {CENTER_X - 150, 380, 300, 80};
     Vector2 mouse = GetMousePosition();
-    bool bob_hover = CheckCollisionPointRec(mouse, bob_rect);
-    bool thea_hover = CheckCollisionPointRec(mouse, thea_rect);
-    bool flint_hover = CheckCollisionPointRec(mouse, flint_rect);
+    bool cover_hover = CheckCollisionPointRec(mouse, cover_btn_rect);
     
-    // Highlight selected AI
-    Color bob_color = (g->selected_opponent_ai == AI_BOB) ? LIME : (bob_hover ? SKYBLUE : BLUE);
-    Color thea_color = (g->selected_opponent_ai == AI_THEA) ? LIME : (thea_hover ? SKYBLUE : BLUE);
-    Color flint_color = (g->selected_opponent_ai == AI_FLINT) ? LIME : (flint_hover ? SKYBLUE : BLUE);
+    Color cover_color = g->cover_p2_cards ? LIME : RED;
+    DrawRectangleRec(cover_btn_rect, cover_hover ? Fade(cover_color, 0.8f) : cover_color);
     
-    DrawRectangleRec(bob_rect, bob_color);
-    DrawRectangleRec(thea_rect, thea_color);
-    DrawRectangleRec(flint_rect, flint_color);
+    const char *cover_text = g->cover_p2_cards ? "COVERED" : "UNCOVERED";
+    int text_w = MeasureText(cover_text, 35);
+    DrawText(cover_text, CENTER_X - text_w/2, 380 + 25, 35, BLACK);
     
-    DrawText("BOB", bob_rect.x + 60, bob_rect.y + 25, 35, BLACK);
-    DrawText("THEA", thea_rect.x + 50, thea_rect.y + 25, 35, BLACK);
-    DrawText("FLINT", flint_rect.x + 45, flint_rect.y + 25, 35, BLACK);
-    
-    // AI Descriptions
-    int desc_y = 480;
-    DrawText("BOB: Prefers Jokers, then low cards", CENTER_X - 400, desc_y, 25, LIGHTGRAY);
-    DrawText("THEA: Random discard strategy", CENTER_X - 400, desc_y + 40, 25, LIGHTGRAY);
-    DrawText("FLINT: Never discards Jokers", CENTER_X - 400, desc_y + 80, 25, LIGHTGRAY);
+    DrawText("(Hides P2 cards from view during local play)", CENTER_X - 300, 480, 25, LIGHTGRAY);
     
     // Back Button
     Rectangle back_rect = {CENTER_X - 150, SCREEN_H - 180, 300, 80};
@@ -157,20 +117,12 @@ void DrawSettings(GameState *g) {
 }
 
 void UpdateSettings(GameState *g, Vector2 mouse) {
-    Rectangle bob_rect = {CENTER_X - 400, 350, 220, 80};
-    Rectangle thea_rect = {CENTER_X - 110, 350, 220, 80};
-    Rectangle flint_rect = {CENTER_X + 180, 350, 220, 80};
+    Rectangle cover_btn_rect = {CENTER_X - 150, 380, 300, 80};
     Rectangle back_rect = {CENTER_X - 150, SCREEN_H - 180, 300, 80};
     
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-        if (CheckCollisionPointRec(mouse, bob_rect)) {
-            g->selected_opponent_ai = AI_BOB;
-        }
-        else if (CheckCollisionPointRec(mouse, thea_rect)) {
-            g->selected_opponent_ai = AI_THEA;
-        }
-        else if (CheckCollisionPointRec(mouse, flint_rect)) {
-            g->selected_opponent_ai = AI_FLINT;
+        if (CheckCollisionPointRec(mouse, cover_btn_rect)) {
+            g->cover_p2_cards = !g->cover_p2_cards;
         }
         else if (CheckCollisionPointRec(mouse, back_rect)) {
             g->state = STATE_MAIN_MENU;
@@ -179,9 +131,8 @@ void UpdateSettings(GameState *g, Vector2 mouse) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  ACCOUNT MANAGER
+//  ACCOUNT MANAGER - REDESIGNED WITH P1/P2 SLOT SYSTEM
 // ─────────────────────────────────────────────────────────────────────────────
-// In mainmenu.c
 
 void DrawAccountsManager(const GameState *g) {
     DrawText("ACCOUNT MANAGER", CENTER_X - 900, 80, 20, GOLD);
@@ -223,34 +174,39 @@ void DrawAccountsManager(const GameState *g) {
         if (!a->is_ai) DrawText(a->last_name, row_rect.x + 20 + MeasureText(a->first_name, 40) + 10, row_rect.y + 20, 40, WHITE);
         DrawText(TextFormat("$%.2f  W:%d L:%d", a->balance, a->wins, a->losses), row_rect.x + 20, row_rect.y + 65, 20, LIGHTGRAY);
 
+        // AI Label
+        if (a->is_ai) {
+            DrawText("[AI]", row_rect.x + 350, row_rect.y + 30, 30, PURPLE);
+        }
+
         // --- BUTTONS ---
         float btn_w = 140;
         float btn_h = 40;
         float start_x = row_rect.x + 600;
         
+        // P1 Button
+        Rectangle btn_p1 = {start_x, row_rect.y + 30, btn_w, btn_h};
+        bool hover_p1 = CheckCollisionPointRec(GetMousePosition(), btn_p1);
+        Color p1_col = is_p1 ? RED : LIME; 
+        const char* p1_txt = is_p1 ? "LOGOUT P1" : "LOGIN P1";
+        DrawRectangleRec(btn_p1, hover_p1 ? Fade(p1_col, 0.8f) : p1_col);
+        DrawText(p1_txt, btn_p1.x + 10, btn_p1.y + 10, 20, BLACK);
 
-            // P1 Button
-            Rectangle btn_p1 = {start_x, row_rect.y + 30, btn_w, btn_h};
-            bool hover_p1 = CheckCollisionPointRec(GetMousePosition(), btn_p1);
-            Color p1_col = is_p1 ? RED : LIME; 
-            const char* p1_txt = is_p1 ? "LOGOUT P1" : "LOGIN P1";
-            DrawRectangleRec(btn_p1, hover_p1 ? Fade(p1_col, 0.8f) : p1_col);
-            DrawText(p1_txt, btn_p1.x + 10, btn_p1.y + 10, 20, BLACK);
+        // P2 Button
+        Rectangle btn_p2 = {start_x + 160, row_rect.y + 30, btn_w, btn_h};
+        bool hover_p2 = CheckCollisionPointRec(GetMousePosition(), btn_p2);
+        Color p2_col = is_p2 ? RED : ORANGE;
+        const char* p2_txt = is_p2 ? "LOGOUT P2" : "LOGIN P2";
+        DrawRectangleRec(btn_p2, hover_p2 ? Fade(p2_col, 0.8f) : p2_col);
+        DrawText(p2_txt, btn_p2.x + 10, btn_p2.y + 10, 20, BLACK);
 
-            // P2 Button
-            Rectangle btn_p2 = {start_x + 160, row_rect.y + 30, btn_w, btn_h};
-            bool hover_p2 = CheckCollisionPointRec(GetMousePosition(), btn_p2);
-            Color p2_col = is_p2 ? RED : ORANGE;
-            const char* p2_txt = is_p2 ? "LOGOUT P2" : "LOGIN P2";
-            DrawRectangleRec(btn_p2, hover_p2 ? Fade(p2_col, 0.8f) : p2_col);
-            DrawText(p2_txt, btn_p2.x + 10, btn_p2.y + 10, 20, BLACK);
-
-            // Delete Button
+        // Delete Button (only for human accounts)
+        if (!a->is_ai) {
             Rectangle btn_del = {row_rect.x + row_rect.width - 100, row_rect.y + 30, 80, btn_h};
             bool hover_del = CheckCollisionPointRec(GetMousePosition(), btn_del);
             DrawRectangleRec(btn_del, hover_del ? RED : MAROON);
             DrawText("DEL", btn_del.x + 20, btn_del.y + 10, 20, WHITE);
-
+        }
       
         y += 110;
     }
@@ -264,8 +220,6 @@ void DrawAccountsManager(const GameState *g) {
     DrawText("BACK", back.x + 100, back.y + 25, 30, WHITE);
 }
 
-// In mainmenu.c
-
 void UpdateAccountsManager(GameState *g, Vector2 mouse) {
     int y = 280;
     bool action_taken = false;
@@ -276,50 +230,49 @@ void UpdateAccountsManager(GameState *g, Vector2 mouse) {
         float btn_h = 40;
         float start_x = row_rect.x + 600;
 
-        if (!g->accounts[i].is_ai) {
-            // HUMAN BUTTONS
-            Rectangle btn_p1 = {start_x, row_rect.y + 30, btn_w, btn_h};
-            Rectangle btn_p2 = {start_x + 160, row_rect.y + 30, btn_w, btn_h};
-            Rectangle btn_del = {row_rect.x + row_rect.width - 100, row_rect.y + 30, 80, btn_h};
+        Rectangle btn_p1 = {start_x, row_rect.y + 30, btn_w, btn_h};
+        Rectangle btn_p2 = {start_x + 160, row_rect.y + 30, btn_w, btn_h};
+        Rectangle btn_del = {row_rect.x + row_rect.width - 100, row_rect.y + 30, 80, btn_h};
 
-            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                if (CheckCollisionPointRec(mouse, btn_p1)) {
-                    if (g->p1_account_index == i) {
-                        LogoutAccount(g, 1);
-                        ShowAccountStatus(g, "Logged P1 Out");
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            // P1 Login/Logout
+            if (CheckCollisionPointRec(mouse, btn_p1)) {
+                if (g->p1_account_index == i) {
+                    LogoutAccount(g, 1);
+                    ShowAccountStatus(g, "Logged P1 Out");
+                } else {
+                    // Check if same account
+                    if (g->p2_account_index == i) {
+                        ShowAccountStatus(g, "Cannot play against yourself!");
                     } else {
                         LoginAccount(g, i, 1);
-                        ShowAccountStatus(g, "Logged P1 In");
-                    }
-                }
-                else if (CheckCollisionPointRec(mouse, btn_p2)) {
-                    if (g->p2_account_index == i) {
-                        LogoutAccount(g, 2);
-                        ShowAccountStatus(g, "Logged P2 Out");
-                    } else {
-                        LoginAccount(g, i, 2);
-                        ShowAccountStatus(g, "Logged P2 In");
-                    }
-                }
-                else if (CheckCollisionPointRec(mouse, btn_del)) {
-                    // Prevent deleting logged in accounts
-                    if (g->p1_account_index == i || g->p2_account_index == i) {
-                        DeleteAccount(g, i);
-                        action_taken = true; // Break loop since list changed
+                        ShowAccountStatus(g, TextFormat("%s logged into P1", g->accounts[i].first_name));
                     }
                 }
             }
-        } else {
-            // AI accounts should be non accessible for the player the player accounts start at index 4
-            Rectangle btn_ai = {start_x + 160, row_rect.y + 30, btn_w + 40, btn_h};
-            
-            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mouse, btn_ai)) {
+            // P2 Login/Logout
+            else if (CheckCollisionPointRec(mouse, btn_p2)) {
                 if (g->p2_account_index == i) {
                     LogoutAccount(g, 2);
-                    ShowAccountStatus(g, TextFormat("Logged %s Out", g->accounts[i].first_name));
+                    ShowAccountStatus(g, "Logged P2 Out");
                 } else {
-                    LoginAccount(g, i, 2);
-                    ShowAccountStatus(g, TextFormat("Assigned %s to P2", g->accounts[i].first_name));
+                    // Check if same account
+                    if (g->p1_account_index == i) {
+                        ShowAccountStatus(g, "Cannot play against yourself!");
+                    } else {
+                        LoginAccount(g, i, 2);
+                        ShowAccountStatus(g, TextFormat("%s logged into P2", g->accounts[i].first_name));
+                    }
+                }
+            }
+            // Delete (only for human accounts not logged in)
+            else if (!g->accounts[i].is_ai && CheckCollisionPointRec(mouse, btn_del)) {
+                if (g->p1_account_index == i || g->p2_account_index == i) {
+                    ShowAccountStatus(g, "Cannot delete logged-in account!");
+                } else {
+                    DeleteAccount(g, i);
+                    ShowAccountStatus(g, "Account deleted");
+                    action_taken = true;
                 }
             }
         }
@@ -334,8 +287,9 @@ void UpdateAccountsManager(GameState *g, Vector2 mouse) {
 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
         if (CheckCollisionPointRec(mouse, create)) {
-            // Reset fields
             current_name_field = 1;
+            memset(new_first_name, 0, sizeof(new_first_name));
+            memset(new_last_name, 0, sizeof(new_last_name));
             g->state = STATE_ACCOUNT_CREATE;
         }
         if (CheckCollisionPointRec(mouse, back)) {
@@ -418,10 +372,12 @@ void UpdateAccountCreate(GameState *g) {
 
         if (CheckCollisionPointRec(m, confirm)) {
             if (strlen(new_first_name) >= 2 && strlen(new_last_name) >= 2) {
-                if (CreateNewAccount(g, new_first_name, new_last_name))
+                if (CreateNewAccount(g, new_first_name, new_last_name)) {
+                    ShowAccountStatus(g, "Account created successfully!");
                     g->state = STATE_ACCOUNTS_MANAGER;
-                else
+                } else {
                     ShowAccountStatus(g, "Name already taken!");
+                }
             }
         }
         else if (CheckCollisionPointRec(m, cancel))

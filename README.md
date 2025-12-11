@@ -40,10 +40,11 @@ Complete a rank by filling **all 3 slots** (clubs, diamonds, spades) on your sid
 **b) Reveal & Resolve**  
 | Discarded Cards | Effect | Rewards/Penalties | Other |
 |-----------------|--------|-------------------|-------|
-| **Same rank (pair)** | **All incomplete ranks swept** (both sides; cards back to deck). | +$1 each (× rank bonus multiplier) | Both draw 1 card. |
+| **Same rank (pair)** | **All incomplete ranks swept**  | +$1 each (× rank bonus multiplier) | Both draw 1 card. |
 | **One Joker** | **Opponent’s entire board swept**. | Joker player: **-$1 penalty** | Both draw 1 card. |
 | **Two Jokers** | **“JOKERS GAMBIT”** – Both boards + hands swept & redrawn (5 cards each). | Each: **-$1 penalty + $5 reward** (× multiplier) | - |
-| **No match** | Normal play. | None | Both draw 1 card. |
+| **No match** | Normal play. | None | Both draw 1 card.
+| **Discarded cards** | All discarded cards held temporarily until placement phase is complete |(BUG REFER TO PROBLEMS)
 
 **c) Placement Phase**  
 - Players take turns (or simultaneous in PvP) placing valid cards into empty slots.  
@@ -68,10 +69,10 @@ Complete a rank by filling **all 3 slots** (clubs, diamonds, spades) on your sid
 - Leaderboard entry: Score, bonuses, matchup, timestamp.
 
 ## Features Implemented  
-- Full PvP / PvAI / AIvAI  
+- Full PvP / PvAI / AIvAI  (BUG REFER TO PROBLEMS)
 - Player name entry (≤10 chars)  
-- Persistent top-10 leaderboard (survives restarts)  
-- Victory & score screens  
+- Persistent top-100 leaderboard (BUG REFER TO PROBLEMS)
+- Victory & score screens  (BUG REFER TO PROBLEMS)
 - Economy system (rewards, multipliers, speed/risk)  
 - Card textures & scaling  
 - Responsive layout (optimized for 1900×1070; future updates planned)  

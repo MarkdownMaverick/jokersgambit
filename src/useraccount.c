@@ -7,24 +7,19 @@
 #define ACCOUNTS_FILE "accounts.json"
 #define LEADERBOARD_FILE "leaderboard.json"
 
-// Array of permanent AI names
 #define NUM_AI_ACCOUNTS (sizeof(AI_NAMES) / sizeof(AI_NAMES[0]))
 
-// Utility function to check if a character is an alphabet letter
 bool IsAlpha(int c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  INITIALIZATION AND ACCOUNT FILE I/O IMPLEMENTATION
-// ─────────────────────────────────────────────────────────────────────────────
 
 void InitAccounts(GameState *g) {
     g->account_count = 0;
     g->p1_account_index = -1;
     g->p2_account_index = -1;
     g->leaderboard_loaded = false;
+    g->leaderboard_sort_by_moves = false;
+    g->cover_p2_cards = false;
     for (int i = 0; i < MAX_ACCOUNTS; i++) {
         memset(&g->accounts[i], 0, sizeof(Account));
         g->accounts[i].balance = 10.00; 
@@ -39,12 +34,9 @@ void LoadAllAccounts(GameState *g)
     FILE *f = fopen(ACCOUNTS_FILE, "r");
     if (!f)
     {
-        // your existing "create default AI + SaveAllAccounts" block can stay here
-        // ...
         return;
     }
 
-    // read whole file into buffer
     fseek(f, 0, SEEK_END);
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -56,13 +48,10 @@ void LoadAllAccounts(GameState *g)
     buffer[read_bytes] = '\0';
     fclose(f);
 
-    // parse JSON
     cJSON *root = cJSON_Parse(buffer);
     free(buffer);
     if (!root)
     {
-        // parsing failed: you can recreate defaults like you already do
-        // ...
         return;
     }
 
@@ -70,7 +59,6 @@ void LoadAllAccounts(GameState *g)
     if (!cJSON_IsArray(arr))
     {
         cJSON_Delete(root);
-        // optionally recreate defaults
         return;
     }
 
@@ -92,7 +80,7 @@ void LoadAllAccounts(GameState *g)
             !cJSON_IsNumber(jb) || !cJSON_IsNumber(jw) ||
             !cJSON_IsNumber(jlost) || !cJSON_IsBool(jai))
         {
-            continue; // skip malformed entry
+            continue;
         }
 
         Account *a = &g->accounts[g->account_count];
@@ -108,7 +96,6 @@ void LoadAllAccounts(GameState *g)
         a->is_ai   = cJSON_IsTrue(jai);
         a->is_active = true;
 
-        // optional: set ai_type based on name, as you already do
         if (a->is_ai)
         {
             if (strcmp(a->first_name, "BOB") == 0)   a->ai_type = AI_BOB;
@@ -120,14 +107,10 @@ void LoadAllAccounts(GameState *g)
     }
 
     cJSON_Delete(root);
-
-    // you can keep your "fallback recreate AI if g->account_count == 0" and
-    // "default BOB login" logic unchanged below this point
 }
 
 void SaveAllAccounts(const GameState *g)
 {
-    // build JSON root and array
     cJSON *root = cJSON_CreateObject();
     cJSON *arr  = cJSON_CreateArray();
     cJSON_AddItemToObject(root, "accounts", arr);
@@ -148,8 +131,7 @@ void SaveAllAccounts(const GameState *g)
         cJSON_AddItemToArray(arr, obj);
     }
 
-    // convert to string
-    char *json_str = cJSON_Print(root);   // or cJSON_PrintUnformatted(root);
+    char *json_str = cJSON_Print(root);
 
     FILE *f = fopen(ACCOUNTS_FILE, "w");
     if (f)
@@ -158,14 +140,9 @@ void SaveAllAccounts(const GameState *g)
         fclose(f);
     }
 
-    // cleanup
-    cJSON_free(json_str);   // or free(), depending on your cJSON version
+    cJSON_free(json_str);
     cJSON_Delete(root);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  LEADERBOARD FILE I/O IMPLEMENTATION (MISSING FUNCTIONS ADDED HERE)
-// ─────────────────────────────────────────────────────────────────────────────
 
 void LoadLeaderboard(GameState *g) {
     FILE *f = fopen(LEADERBOARD_FILE, "r");
@@ -176,7 +153,6 @@ void LoadLeaderboard(GameState *g) {
         return;
     }
 
-    // read whole file
     fseek(f, 0, SEEK_END);
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -212,14 +188,31 @@ void LoadLeaderboard(GameState *g) {
 
         cJSON *js = cJSON_GetObjectItem(elem, "score");
         cJSON *jn = cJSON_GetObjectItem(elem, "name");
+        cJSON *jw = cJSON_GetObjectItem(elem, "winner");
+        cJSON *jt = cJSON_GetObjectItem(elem, "timestamp");
+        cJSON *jm = cJSON_GetObjectItem(elem, "moves");
+        
         if (!cJSON_IsNumber(js) || !cJSON_IsString(jn)) continue;
 
         LeaderboardEntry *e = &g->leaderboard[g->leaderboard_count];
         e->total_winnings = (float)js->valuedouble;
 
-        strncpy(e->entry_name, jn->valuestring,
-                MAX_LEADERBOARD_ENTRY_NAME_LEN - 1);
+        strncpy(e->entry_name, jn->valuestring, MAX_LEADERBOARD_ENTRY_NAME_LEN - 1);
         e->entry_name[MAX_LEADERBOARD_ENTRY_NAME_LEN - 1] = '\0';
+        
+        if (cJSON_IsString(jw)) {
+            strncpy(e->winner_name, jw->valuestring, MAX_LEADERBOARD_WINNER_NAME_LEN - 1);
+            e->winner_name[MAX_LEADERBOARD_WINNER_NAME_LEN - 1] = '\0';
+        }
+        
+        if (cJSON_IsString(jt)) {
+            strncpy(e->timestamp, jt->valuestring, MAX_LEADERBOARD_TIMESTAMP_LEN - 1);
+            e->timestamp[MAX_LEADERBOARD_TIMESTAMP_LEN - 1] = '\0';
+        }
+        
+        if (cJSON_IsNumber(jm)) {
+            e->total_moves = jm->valueint;
+        }
 
         g->leaderboard_count++;
     }
@@ -227,7 +220,6 @@ void LoadLeaderboard(GameState *g) {
     cJSON_Delete(root);
     g->leaderboard_loaded = true;
 }
-
 
 void SaveLeaderboard(const GameState *g) {
     cJSON *root = cJSON_CreateObject();
@@ -240,11 +232,14 @@ void SaveLeaderboard(const GameState *g) {
         cJSON *obj = cJSON_CreateObject();
         cJSON_AddNumberToObject(obj, "score", e->total_winnings);
         cJSON_AddStringToObject(obj, "name",  e->entry_name);
+        cJSON_AddStringToObject(obj, "winner", e->winner_name);
+        cJSON_AddStringToObject(obj, "timestamp", e->timestamp);
+        cJSON_AddNumberToObject(obj, "moves", e->total_moves);
 
         cJSON_AddItemToArray(arr, obj);
     }
 
-    char *json_str = cJSON_Print(root);   // or cJSON_PrintUnformatted(root)
+    char *json_str = cJSON_Print(root);
 
     FILE *f = fopen(LEADERBOARD_FILE, "w");
     if (f) {
@@ -252,31 +247,22 @@ void SaveLeaderboard(const GameState *g) {
         fclose(f);
     }
 
-    cJSON_free(json_str);   // or free(), depending on your cJSON build
+    cJSON_free(json_str);
     cJSON_Delete(root);
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  ACCOUNT MANAGEMENT LOGIC
-// ─────────────────────────────────────────────────────────────────────────────
-
 bool IsNameValid(const char *name) {
-    // Check length
     size_t len = strlen(name);
     if (len == 0 || len > MAX_ACCOUNT_NAME_LEN) return false;
 
-    // Check characters
     for (size_t i = 0; i < len; i++) {
         if (!IsAlpha(name[i])) return false;
     }
     return true;
 }
 
-// Checks if an account with the same first and last name exists
 bool DoesAccountExist(const GameState *g, const char *first, const char *last) {
     for (int i = 0; i < g->account_count; i++) {
-        // AI accounts have an empty last name, so skip them
         if (g->accounts[i].last_name[0] == '\0') continue; 
         
         if (strcmp(g->accounts[i].first_name, first) == 0 &&
@@ -287,7 +273,6 @@ bool DoesAccountExist(const GameState *g, const char *first, const char *last) {
     return false;
 }
 
-// src/useraccount.c — FIXED CreateNewAccount (now sets wins/losses = 0)
 bool CreateNewAccount(GameState *g, const char *first, const char *last)
 {
     if (g->account_count >= MAX_ACCOUNTS) return false;
@@ -305,29 +290,26 @@ bool CreateNewAccount(GameState *g, const char *first, const char *last)
     a->is_ai = false;
     a->is_active = true;
 
-    SaveAllAccounts(g);  // Save immediately
+    SaveAllAccounts(g);
     return true;
 }
 
-// src/useraccount.c — FIXED DeleteAccount (saves after delete)
 void DeleteAccount(GameState *g, int index)
 {
     if (index < 0 || index >= g->account_count) return;
 
-    // Shift array
     for (int i = index; i < g->account_count - 1; i++)
         g->accounts[i] = g->accounts[i + 1];
 
     g->account_count--;
 
-    // Update indices
     if (g->p1_account_index == index) g->p1_account_index = -1;
     else if (g->p1_account_index > index) g->p1_account_index--;
     
     if (g->p2_account_index == index) g->p2_account_index = -1;
     else if (g->p2_account_index > index) g->p2_account_index--;
 
-    SaveAllAccounts(g);  // Save immediately
+    SaveAllAccounts(g);
 }
 
 void LogoutAccount(GameState *g, int player) {
@@ -339,13 +321,10 @@ void LogoutAccount(GameState *g, int player) {
 }
 
 void LoginAccount(GameState *g, int index, int player) {
-    // Logout the previous player
     LogoutAccount(g, player);
 
-    // Login new player
     int *index_ptr = (player == 1) ? &g->p1_account_index : &g->p2_account_index;
     if (index >= 0 && index < g->account_count) {
-        // Prevent logging into the same account on both players
         int other_player_index = (player == 1) ? g->p2_account_index : g->p1_account_index;
         if (index != other_player_index) {
             g->accounts[index].is_logged_in = true;
@@ -354,7 +333,6 @@ void LoginAccount(GameState *g, int index, int player) {
     }
 }
 
-// src/useraccount.c — FIXED GetPlayerName (remove unused statics outside)
 const char* GetPlayerName(const GameState *g, int player) {
     static char full_name_p1[MAX_ACCOUNT_NAME_LEN * 2 + 3];
     static char full_name_p2[MAX_ACCOUNT_NAME_LEN * 2 + 3];
@@ -372,18 +350,10 @@ const char* GetPlayerName(const GameState *g, int player) {
     return (player == 1) ? "P1: Log In" : "P2: Log In";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  BALANCE UPDATE LOGIC (Called from main.c on Game Over)
-// ─────────────────────────────────────────────────────────────────────────────
-
-//extern float CalculateFinalScore(float balance, int total_moves, bool is_winner);
-
-// src/useraccount.c — FIXED UpdateAccountBalances (remove unused loser)
 void UpdateAccountBalances(GameState *g)
 {
     if (g->game_over && g->winner > 0)
     {
-        // Update balances (your game logic already has final balances in g->p1_balance)
         if (g->p1_account_index != -1)
         {
             g->accounts[g->p1_account_index].balance = (double)g->p1_balance;
@@ -399,6 +369,5 @@ void UpdateAccountBalances(GameState *g)
         }
     }
 
-    SaveAllAccounts(g);  // Save only here, on win/lose
+    SaveAllAccounts(g);
 }
-
