@@ -1,62 +1,106 @@
-# ─────────────────────────────────────────────────────────────
-# Joker's Gambit – Makefile (Manjaro/Arch + raylib)
-# ─────────────────────────────────────────────────────────────
+# Joker's Gambit – Cross-Platform Makefile
+# Works on: Linux (Ubuntu, Manjaro), macOS, Windows (MSYS2/MinGW)
 
-TARGET   := jokersgambit                 # final binary name (lowercase is nicer)
+# ── Detect OS ───────────────────────────────────────────────
+UNAME_S := $(shell uname -s)
+UNAME_M := $(shell uname -m)
 
-# ── Source files (all .c files inside src/) ─────────────────
-SRC_DIR  := src
-SOURCES  := $(wildcard $(SRC_DIR)/*.c)    # automatically picks main.c gui.c aibots.c useraccount.c ...
+# Set OS type
+ifeq ($(UNAME_S),Linux)
+    OS := LINUX
+    LIBS_EXTRA := -lX11 -ldl -lpthread -lrt
+    EXE :=
+endif
 
-# ── Object files (same basename, placed next to the binary) ─
-OBJ_DIR  := obj
-OBJECTS  := $(addprefix $(OBJ_DIR)/,$(notdir $(SOURCES:.c=.o)))
+ifeq ($(UNAME_S),Darwin)
+    OS := MACOS
+    LIBS_EXTRA := -framework Cocoa -framework OpenGL
+    EXE :=
+endif
 
-# ── Compiler & flags ───────────────────────────────────────
-CC       := gcc
-CFLAGS   := -Wall -Wextra -Wpedantic -O2 -march=native -pipe \
-            -I. -I$(SRC_DIR)              # include project root + src/ for headers
+# Windows detection (via MSYS2/MinGW)
+ifeq ($(OS_TYPE),Windows_NT)
+    OS := WINDOWS
+    LIBS_EXTRA := -lws2_32
+    EXE := .exe
+endif
 
-# Use pkg-config for raylib (cleanest way on Arch/Manjaro)
-LDFLAGS  := $(shell pkg-config --libs raylib) -lm -lcjson
+# Fallback for Windows detection
+ifeq ($(OS),)
+    ifneq (,$(findstring MINGW,$(shell uname)))
+        OS := WINDOWS
+        LIBS_EXTRA := -lws2_32
+        EXE := .exe
+    endif
+endif
 
-# ── Rules ───────────────────────────────────────────────────
-.PHONY: all run clean edit watch remove_data
+# ── Compiler & Flags ────────────────────────────────────────
+CC := gcc
+CFLAGS := -Wall -Wextra -std=c99 -O2 -march=native -pipe
 
-# Make 'all' run 'remove_data' BEFORE building the target
-all: remove_data $(TARGET)
+# Directories
+SRC_DIR := src
+INC_DIR := include
+OBJ_DIR := obj
+LIB_DIR := lib
 
+# Include paths
+INCLUDES := -I$(INC_DIR) \
+            -I$(LIB_DIR)/raylib/include \
+            -I$(LIB_DIR)/cjson/include
 
+# Library paths
+LIB_PATHS := -L$(LIB_DIR)/raylib/lib \
+             -L$(LIB_DIR)/cjson/lib
 
-# Link final executable
-$(TARGET): $(OBJECTS)
-	$(CC) $^ -o $@ $(LDFLAGS)
-	@echo "Build finished -> ./$(TARGET)"
+# Libraries to link
+LIBS := $(LIB_DIR)/raylib/lib/libraylib.a \
+        $(LIB_DIR)/cjson/lib/libcjson.a \
+        -lm $(LIBS_EXTRA)
 
-# Compile .c → .o (creates obj/ folder automatically)
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+# Source & Object files
+SRCS := $(wildcard $(SRC_DIR)/*.c)
+OBJS := $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+TARGET := jokersgambit$(EXE)
 
-# Create obj/ directory if it doesn't exist
+# ── Build Rules ─────────────────────────────────────────────
+.PHONY: all clean run info install-deps
+
+all: $(TARGET)
+	@echo "✅ Build complete for $(OS)!"
+
+$(TARGET): $(OBJ_DIR) $(OBJS)
+	@echo "🔗 Linking for $(OS)..."
+	$(CC) $(OBJS) $(LIB_PATHS) $(LIBS) -o $(TARGET)
+
 $(OBJ_DIR):
-	mkdir -p $(OBJ_DIR)
+	@mkdir -p $(OBJ_DIR)
 
-# ── Convenience targets ─────────────────────────────────────
-run: $(TARGET)
-	./$(TARGET)   # runs from project root so assets in cards/, keycards/ are found
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@echo "🔨 Compiling $<..."
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
+	@echo "🧹 Cleaning..."
 	rm -rf $(OBJ_DIR) $(TARGET)
-	@echo "Cleaned $(TARGET) and object files"
 
-# Open the whole project in VS Code (you already have this shortcut)
-edit:
-	code .
+run: $(TARGET)
+	@echo "🎮 Starting game on $(OS)..."
+	./$(TARGET)
 
-# Optional: rebuild on any source change (great with entr(1) or watchexec)
-watch:
-	@echo "Watching for changes... (Ctrl+C to stop)"
-	@while true; do \
-		$(MAKE) --silent; \
-		inotifywait -qre close_write,move,create,delete $(SRC_DIR) || sleep 0.1; \
-	done
+info:
+	@echo "OS detected: $(OS)"
+	@echo "Architecture: $(UNAME_M)"
+	@echo "Executable: $(TARGET)"
+
+install-deps:
+	@echo "Installing dependencies for $(OS)..."
+ifeq ($(OS),LINUX)
+	sudo apt update && sudo apt install -y libraylib-dev libjson-c-dev build-essential
+else ifeq ($(OS),MACOS)
+	brew install raylib json-c
+else ifeq ($(OS),WINDOWS)
+	@echo "Install via MSYS2: pacman -S mingw-w64-x86_64-raylib mingw-w64-x86_64-json-c"
+else
+	@echo "❌ Unsupported OS: $(OS)"
+endif
