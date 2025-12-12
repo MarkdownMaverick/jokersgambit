@@ -248,6 +248,7 @@ void ResolveDiscards(GameState *g)
         g->p2_balance += (REWARD_DOUBLE_JOKER * mult2);
         ReturnToDeck(g, d1);
         ReturnToDeck(g, d2);
+        PlaySound(g_matching_jokers_sound); // Added sound
     }
     else if (j1 || j2)
     {
@@ -261,6 +262,7 @@ void ResolveDiscards(GameState *g)
         g->player2_hand[g->p2_hand_size++] = DrawFromDeck(g);
         ReturnToDeck(g, d1);
         ReturnToDeck(g, d2);
+        PlaySound(g_joker_sound); // Added sound
     }
     else if (d1.rank == d2.rank)
     {
@@ -271,6 +273,7 @@ void ResolveDiscards(GameState *g)
         g->player2_hand[g->p2_hand_size++] = DrawFromDeck(g);
         ReturnToDeck(g, d1);
         ReturnToDeck(g, d2);
+        PlaySound(g_matching_cards_sound); // Added sound
     }
     else
     {
@@ -632,6 +635,7 @@ int main(void)
             g.p2_selected = false;
             g.state = STATE_WAIT_FOR_TURN;
             g.ai_timer = 0;
+            PlaySound(g_reveal_sound); // Added sound for card reveal
         }
         else if (g.state == STATE_BLOCK_DECAY)
         {
@@ -660,6 +664,7 @@ int main(void)
 
                 UpdateAccountBalances(&g);
                 AddLeaderboardEntry(&g, g.winner);
+                PlaySound(g_win_sound); // Sound for winning the game
             }
             else
             {
@@ -715,6 +720,7 @@ int main(void)
             if (CheckCollisionPointRec(mouse, skip_btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
             {
                 skip_placement_pressed = true;
+                PlaySound(g_continue_sound); // Added sound for continue button
             }
 
             if (g.state == STATE_WAIT_FOR_TURN)
@@ -758,6 +764,7 @@ int main(void)
                                                     g.p1_hand_size--;
                                                     g.player1_hand[g.p1_hand_size++] = DrawFromDeck(&g);
                                                     placed = true;
+                                                    PlaySound(g_place_sound); // Sound for card placement
                                                     break;
                                                 }
                                             }
@@ -807,6 +814,7 @@ int main(void)
                                                     g.p2_hand_size--;
                                                     g.player2_hand[g.p2_hand_size++] = DrawFromDeck(&g);
                                                     placed = true;
+                                                    PlaySound(g_place_sound); // Sound for card placement
                                                     break;
                                                 }
                                             }
@@ -841,6 +849,7 @@ int main(void)
                         {
                             *idx_ptr = i;
                             *selected_ptr = true;
+                            PlaySound(g_discard_sound); // Sound for selecting a discard card
                             if (g.state == STATE_P1_SELECT_DISCARD)
                                 g.state = STATE_P2_SELECT_DISCARD;
                             else if (g.state == STATE_P2_SELECT_DISCARD)
