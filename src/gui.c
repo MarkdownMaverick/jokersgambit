@@ -277,7 +277,7 @@ void DrawPlayerUI(const GameState *g, int player)
     float balance = (player == 1) ? g->p1_balance : g->p2_balance;
     int ranks = (player == 1) ? g->p1_completed_ranks : g->p2_completed_ranks;
     Color p_color = (player == 1) ? BLUE : RED;
-
+    const char *player_name = GetPlayerName(g, player);
     if (g_ui_frame_texture.id)
     {
         DrawTexturePro(g_ui_frame_texture,
@@ -291,13 +291,12 @@ void DrawPlayerUI(const GameState *g, int player)
     }
 
     int y1 = (int)frame_rect.y + UI_TEXT_OFFSET_X;
-    DrawText(TextFormat("   ||| $%.2f", balance), (int)frame_rect.x + UI_TEXT_OFFSET_X, y1, 21, p_color);
-
+    DrawText(TextFormat("   ||| %s... ", player_name), (int)frame_rect.x + UI_TEXT_OFFSET_X, y1, 21, p_color);
     int y2 = y1 + UI_LINE_SPACING;
-    DrawText(TextFormat("   ||| Ranks: %d/%d", ranks, KEYCARDS), (int)frame_rect.x + UI_TEXT_OFFSET_X, y2, 21, p_color);
+    DrawText(TextFormat("   ||| Balance: $%.2f ", balance, ranks, KEYCARDS), (int)frame_rect.x + UI_TEXT_OFFSET_X, y2, 21, p_color);
 
     int y3 = y2 + UI_LINE_SPACING;
-    DrawText(TextFormat("   ||| Moves: %d", g->total_moves), (int)frame_rect.x + UI_TEXT_OFFSET_X, y3, 21, p_color);
+    DrawText(TextFormat("   ||| Ranks: %d/%d Moves: %d", ranks, KEYCARDS, g->total_moves), (int)frame_rect.x + UI_TEXT_OFFSET_X, y3, 21, p_color);
 }
 
 void DrawGameLayout(const GameState *g)
