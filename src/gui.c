@@ -14,8 +14,8 @@
 #define P1_DISCARD_X (KEYCARD_COL_X - CARD_W_SCALED - 100)
 #define P2_DISCARD_X (KEYCARD_COL_X + CARD_W_SCALED + 100)
 
-#include "gui.h"
-#include "useraccount.h"
+#include "include/gui.h"
+#include "include/useraccount.h"
 
 float GetRankY(int key_idx)
 {

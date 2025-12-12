@@ -1,6 +1,6 @@
-#include "mainmenu.h"
-#include "useraccount.h"
-#include "gui.h"
+#include "include/mainmenu.h"
+#include "include/useraccount.h"
+#include "include/gui.h"
 
 char new_first_name[MAX_ACCOUNT_NAME_LEN + 1] = {0};
 char new_last_name[MAX_ACCOUNT_NAME_LEN + 1] = {0};

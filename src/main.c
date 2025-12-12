@@ -1,13 +1,22 @@
-#include "main.h"
-#include "gui.h"
-#include "aibots.h"
-#include "mainmenu.h"
-#include "useraccount.h"
-
+#include "include/main.h"
+#include "include/gui.h"
+#include "include/aibots.h"
+#include "include/mainmenu.h"
+#include "include/useraccount.h"
 Texture2D g_card_back_texture = {0};
 Texture2D g_background_texture = {0};
 Texture2D g_ui_frame_texture = {0};
 Texture2D g_button_texture = {0};
+Sound g_discard_sound = {0};
+Sound g_place_sound = {0};
+
+Sound g_filled_rank_sound = {0};
+Sound g_reveal_sound = {0};
+Sound g_win_sound = {0};
+Sound g_joker_sound = {0};
+Sound g_matching_jokers_sound = {0};
+Sound g_matching_cards_sound = {0};
+Sound g_continue_sound = {0};
 
 GameState g_initial_state = {0};
 
@@ -142,6 +151,7 @@ void CheckRankCompletionBonus(GameState *g, int player, int key_idx, int cards_b
         float mult = GetRewardMultiplier(*completed);
         *balance += REWARD_COMPLETION * mult;
         (*completed)++;
+        PlaySound(g_filled_rank_sound);
     }
 }
 
@@ -216,7 +226,6 @@ static void JokersGambit(GameState *g)
     g->p1_hand_size = g->p2_hand_size = HAND_SIZE;
 }
 
-// REPLACE the existing STATE_WAIT_FOR_TURN initialization in ResolveDiscards with:
 void ResolveDiscards(GameState *g)
 {
     Card d1 = g->revealed_p1;
@@ -274,9 +283,6 @@ void ResolveDiscards(GameState *g)
     g->p1_done_placing = false;
     g->p2_done_placing = false;
     g->total_moves++;
-
-    // Keep revealed cards visible during placement phase
-    // They will be hidden when transitioning to next discard phase
 }
 
 void RefreshHands(GameState *g)
@@ -333,19 +339,20 @@ void AddLeaderboardEntry(GameState *g, int winner)
     else if (g->mode == MODE_PVP)
         snprintf(e->entry_name, 64, "%s_vs_%s", p1_name_str, p2_name_str);
     else
-        snprintf(e->entry_name, 64, "Flint_vs_Thea");
+        snprintf(e->entry_name, 64, "%s_vs_%s", p1_name_str, p2_name_str);
 
     e->final_balance = (winner == 1) ? g->p1_balance : g->p2_balance;
     float final_score_winner = CalculateFinalScore(e->final_balance, g->total_moves, true);
     e->total_winnings = final_score_winner;
     e->bonus = e->total_winnings - e->final_balance;
+    e->total_moves = g->total_moves;
 
     snprintf(e->winner_name, 32, "%s", (winner == 1) ? p1_name_str : p2_name_str);
 
     time_t timer;
     time(&timer);
     struct tm *tm_info = localtime(&timer);
-    strftime(e->timestamp, 32, "(%m/%d)", tm_info);
+    strftime(e->timestamp, 32, "%m/%d/%y", tm_info);
     g->leaderboard_count++;
 
     SaveLeaderboard(g);
@@ -353,7 +360,6 @@ void AddLeaderboardEntry(GameState *g, int winner)
 
 void InitGame(GameState *g)
 {
-    // Save persistent data
     Account saved_accounts[MAX_ACCOUNTS];
     LeaderboardEntry saved_leaderboard[MAX_LEADERBOARD_ENTRIES];
     int saved_account_count = g->account_count;
@@ -362,14 +368,14 @@ void InitGame(GameState *g)
     GameMode saved_mode = g->mode;
     int saved_leaderboard_count = g->leaderboard_count;
     AIType saved_opponent_ai = g->selected_opponent_ai;
+    bool saved_cover = g->cover_p2_cards;
+    bool saved_sort = g->leaderboard_sort_by_moves;
 
     memcpy(saved_accounts, g->accounts, sizeof(saved_accounts));
     memcpy(saved_leaderboard, g->leaderboard, sizeof(saved_leaderboard));
 
-    // FULL CLEAN RESET
     *g = (GameState){0};
 
-    // Restore persistent data
     memcpy(g->accounts, saved_accounts, sizeof(saved_accounts));
     memcpy(g->leaderboard, saved_leaderboard, sizeof(saved_leaderboard));
     g->account_count = saved_account_count;
@@ -378,8 +384,9 @@ void InitGame(GameState *g)
     g->mode = saved_mode;
     g->leaderboard_count = saved_leaderboard_count;
     g->selected_opponent_ai = saved_opponent_ai;
+    g->cover_p2_cards = saved_cover;
+    g->leaderboard_sort_by_moves = saved_sort;
 
-    // Build deck (existing code continues...)
     Rank keys[5] = {RANK_ACE, RANK_KING, RANK_QUEEN, RANK_JACK, RANK_10};
     int idx = 0;
 
@@ -410,14 +417,12 @@ void InitGame(GameState *g)
     g->current_deck_size = idx;
     g->top_card_index = idx - 1;
 
-    // Keycards
     for (int i = 0; i < KEYCARDS; i++)
     {
         g->keycards[i] = (Card){.rank = keys[i], .suit = SUIT_HEARTS};
         LoadCardTexture(&g->keycards[i], "keycards/");
     }
 
-    // Shuffle
     for (int i = g->top_card_index; i > 0; i--)
     {
         int j = rand() % (i + 1);
@@ -426,7 +431,6 @@ void InitGame(GameState *g)
         g->deck[j] = t;
     }
 
-    // Deal hands
     for (int i = 0; i < HAND_SIZE; i++)
     {
         g->player1_hand[i] = DrawFromDeck(g);
@@ -434,8 +438,6 @@ void InitGame(GameState *g)
     }
     g->p1_hand_size = g->p2_hand_size = HAND_SIZE;
 
-    // FIX: Load balances correctly for both human and AI accounts
-    // Player 1 balance
     if (g->p1_account_index != -1)
     {
         g->p1_balance = (float)g->accounts[g->p1_account_index].balance;
@@ -445,25 +447,22 @@ void InitGame(GameState *g)
         g->p1_balance = 10.0f;
     }
 
-    // Player 2 balance - check if it's PvAI mode and load selected AI's balance
     if (g->p2_account_index != -1)
     {
         g->p2_balance = (float)g->accounts[g->p2_account_index].balance;
     }
     else if (g->mode == MODE_PVAI)
     {
-        // Find the AI account matching the selected opponent
         for (int i = 0; i < g->account_count; i++)
         {
             if (g->accounts[i].is_ai && g->accounts[i].ai_type == g->selected_opponent_ai)
             {
                 g->p2_balance = (float)g->accounts[i].balance;
-                g->p2_account_index = i; // Auto-login the AI
+                g->p2_account_index = i;
                 g->accounts[i].is_logged_in = true;
                 break;
             }
         }
-        // Fallback if AI not found
         if (g->p2_account_index == -1)
         {
             g->p2_balance = 10.0f;
@@ -474,7 +473,6 @@ void InitGame(GameState *g)
         g->p2_balance = 10.0f;
     }
 
-    // Reset round state
     g->state = STATE_P1_SELECT_DISCARD;
     g->p1_completed_ranks = g->p2_completed_ranks = 0;
     g->total_moves = 0;
@@ -483,6 +481,7 @@ void InitGame(GameState *g)
     g->game_over = false;
     g->p1_selected = g->p2_selected = false;
 }
+
 void RestartGameKeepingAccounts(GameState *g)
 {
     InitGame(g);
@@ -495,7 +494,22 @@ int main(void)
     srand((unsigned)time(NULL));
     InitWindow(SCREEN_W, SCREEN_H, "JOKERS GAMBIT");
     SetTargetFPS(60);
+    InitAudioDevice(); // Initialize audio device
 
+    // 👇 UPDATE BOTH FILE PATHS
+    g_discard_sound = LoadSound("sfx/discard.wav");
+    g_filled_rank_sound = LoadSound("sfx/filledrank.wav");
+    g_win_sound = LoadSound("sfx/win.wav");
+    g_place_sound = LoadSound("sfx/place.wav");
+    g_reveal_sound = LoadSound("sfx/reveal.wav");
+    g_joker_sound = LoadSound("sfx/onejoker.wav");
+    g_matching_jokers_sound = LoadSound("sfx/twojokers.wav");
+    g_matching_cards_sound = LoadSound("sfx/matchingcards.wav");
+    g_continue_sound = LoadSound("sfx/continue.wav");
+
+    // Optional: Adjust volume
+    SetSoundVolume(g_discard_sound, 0.5f);
+    SetSoundVolume(g_filled_rank_sound, 0.7f);
     g_card_back_texture = LoadTexture("keycards/BACK.png");
     g_background_texture = LoadTexture("keycards/background.png");
     g_ui_frame_texture = LoadTexture("keycards/frame.png");
@@ -525,7 +539,6 @@ int main(void)
                 (game_active || g.state == STATE_GAME_OVER || g.state == STATE_LEADERBOARD ||
                  g.state == STATE_ACCOUNTS_MANAGER || g.state == STATE_ACCOUNT_CREATE || g.state == STATE_SETTINGS))
             {
-                // FIX: Save balances before returning to menu
                 if (game_active)
                 {
                     if (g.p1_account_index != -1)
@@ -538,7 +551,6 @@ int main(void)
             }
             if (CheckCollisionPointRec(mouse, restart_btn_rect) && (game_active || g.state == STATE_GAME_OVER))
             {
-                // FIX: Save balances before restarting
                 if (g.p1_account_index != -1)
                     g.accounts[g.p1_account_index].balance = (double)g.p1_balance;
                 if (g.p2_account_index != -1)
@@ -547,9 +559,41 @@ int main(void)
                 RestartGameKeepingAccounts(&g);
                 g.state = STATE_P1_SELECT_DISCARD;
             }
-            if (g.state == STATE_LEADERBOARD && !CheckCollisionPointRec(mouse, menu_btn_rect))
+
+            // Leaderboard sort button
+            if (g.state == STATE_LEADERBOARD)
             {
-                g.state = STATE_MAIN_MENU;
+                Rectangle sort_btn = {CENTER_X + 400, 130, 200, 50};
+                if (CheckCollisionPointRec(mouse, sort_btn))
+                {
+                    g.leaderboard_sort_by_moves = !g.leaderboard_sort_by_moves;
+                }
+                else if (!CheckCollisionPointRec(mouse, menu_btn_rect))
+                {
+                    g.state = STATE_MAIN_MENU;
+                }
+            }
+
+            // Game Over screen buttons
+            if (g.state == STATE_GAME_OVER)
+            {
+                Rectangle restart_btn = {CENTER_X - 450, SCREEN_H - 150, 280, 80};
+                Rectangle menu_btn = {CENTER_X - 140, SCREEN_H - 150, 280, 80};
+                Rectangle quit_btn = {CENTER_X + 170, SCREEN_H - 150, 280, 80};
+
+                if (CheckCollisionPointRec(mouse, restart_btn))
+                {
+                    RestartGameKeepingAccounts(&g);
+                    g.state = STATE_P1_SELECT_DISCARD;
+                }
+                else if (CheckCollisionPointRec(mouse, menu_btn))
+                {
+                    g.state = STATE_MAIN_MENU;
+                }
+                else if (CheckCollisionPointRec(mouse, quit_btn))
+                {
+                    break; // Exit game loop
+                }
             }
         }
 
@@ -627,11 +671,6 @@ int main(void)
         else if (g.state == STATE_GAME_OVER)
         {
             if (IsKeyPressed(KEY_R))
-            {
-                RestartGameKeepingAccounts(&g);
-                g.state = STATE_P1_SELECT_DISCARD;
-            }
-            if (GetTime() - g.win_timer_start > 10.0)
             {
                 RestartGameKeepingAccounts(&g);
                 g.state = STATE_P1_SELECT_DISCARD;
@@ -865,6 +904,21 @@ int main(void)
         EndDrawing();
     }
 
+    UnloadTexture(g_card_back_texture);
+    UnloadTexture(g_background_texture);
+    UnloadTexture(g_ui_frame_texture);
+    UnloadTexture(g_button_texture);
+    UnloadSound(g_discard_sound);
+    UnloadSound(g_filled_rank_sound);
+    UnloadSound(g_win_sound);
+    UnloadSound(g_place_sound);
+    UnloadSound(g_reveal_sound);
+    UnloadSound(g_joker_sound);
+    UnloadSound(g_matching_jokers_sound);
+    UnloadSound(g_matching_cards_sound);
+    UnloadSound(g_continue_sound);
+
+    CloseAudioDevice();
     CloseWindow();
     return 0;
 }

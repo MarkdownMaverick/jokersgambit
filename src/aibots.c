@@ -1,6 +1,6 @@
 // aibots.c
 
-#include "aibots.h"
+#include "include/aibots.h"
 
 // BOB AI: Original behavior - prefers Jokers, then low cards
 static void AI_Bob_SelectDiscard(Card *hand, int hand_size, int *best_idx) {

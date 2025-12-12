@@ -227,6 +227,15 @@ extern Texture2D g_card_back_texture;
 extern Texture2D g_background_texture;
 extern Texture2D g_ui_frame_texture;
 extern Texture2D g_button_texture;
+extern Sound g_discard_sound;
+extern Sound g_place_sound;
+extern Sound g_filled_rank_sound;
+extern Sound g_reveal_sound;
+extern Sound g_win_sound;
+extern Sound g_joker_sound;
+extern Sound g_matching_jokers_sound;
+extern Sound g_matching_cards_sound;
+extern Sound g_continue_sound;
 
 // Helper prototypes
 Card DrawFromDeck(GameState *g);
