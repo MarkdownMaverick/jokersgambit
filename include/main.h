@@ -236,7 +236,7 @@ extern Sound g_joker_sound;
 extern Sound g_matching_jokers_sound;
 extern Sound g_matching_cards_sound;
 extern Sound g_continue_sound;
-
+extern Music g_background_music;
 // Helper prototypes
 Card DrawFromDeck(GameState *g);
 void CheckRankCompletionBonus(GameState *g, int player, int key_idx, int cards_before);

@@ -18,6 +18,8 @@ Sound g_matching_jokers_sound = {0};
 Sound g_matching_cards_sound = {0};
 Sound g_continue_sound = {0};
 
+Music g_background_music = {0}; // <--- ADDED: Background music definition
+
 GameState g_initial_state = {0};
 
 float GetRewardMultiplier(int completed_ranks)
@@ -499,7 +501,7 @@ int main(void)
     SetTargetFPS(60);
     InitAudioDevice(); // Initialize audio device
 
-    // 👇 UPDATE BOTH FILE PATHS
+    // 👇 Load all Sound effects
     g_discard_sound = LoadSound("sfx/discard.wav");
     g_filled_rank_sound = LoadSound("sfx/filledrank.wav");
     g_win_sound = LoadSound("sfx/win.wav");
@@ -510,9 +512,15 @@ int main(void)
     g_matching_cards_sound = LoadSound("sfx/matchingcards.wav");
     g_continue_sound = LoadSound("sfx/continue.wav");
 
-    // Optional: Adjust volume
+    // 🎵 NEW: Load and start the background music stream
+    g_background_music = LoadMusicStream("sfx/track.mp3"); // <--- REPLACE WITH YOUR PATH
+    SetMusicVolume(g_background_music, 0.4f); // Adjust volume (e.g., 40%)
+    PlayMusicStream(g_background_music); // Start playing
+
+    // Optional: Adjust sound volume
     SetSoundVolume(g_discard_sound, 0.5f);
     SetSoundVolume(g_filled_rank_sound, 0.7f);
+
     g_card_back_texture = LoadTexture("keycards/BACK.png");
     g_background_texture = LoadTexture("keycards/background.png");
     g_ui_frame_texture = LoadTexture("keycards/frame.png");
@@ -529,6 +537,9 @@ int main(void)
 
     while (!WindowShouldClose())
     {
+        // 🎵 NEW: Essential call to update the music stream every frame
+        UpdateMusicStream(g_background_music);
+
         Vector2 mouse = GetMousePosition();
         Rectangle menu_btn_rect = {40, 20, 300, 70};
         Rectangle restart_btn_rect = {SCREEN_W - 340, 20, 300, 70};
@@ -926,6 +937,8 @@ int main(void)
     UnloadSound(g_matching_jokers_sound);
     UnloadSound(g_matching_cards_sound);
     UnloadSound(g_continue_sound);
+
+    UnloadMusicStream(g_background_music); // <--- ADDED: Unload the music stream
 
     CloseAudioDevice();
     CloseWindow();
