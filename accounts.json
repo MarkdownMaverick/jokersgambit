@@ -2,35 +2,35 @@
 	"accounts":	[{
 			"first_name":	"BOB",
 			"last_name":	"",
-			"balance":	-3712.8125,
+			"balance":	0,
 			"wins":	0,
-			"losses":	4,
+			"losses":	0,
 			"is_ai":	true
 		}, {
 			"first_name":	"THEA",
 			"last_name":	"",
-			"balance":	4110.4873046875,
-			"wins":	5,
+			"balance":	0,
+			"wins":	0,
 			"losses":	0,
 			"is_ai":	true
 		}, {
 			"first_name":	"FLINT",
 			"last_name":	"",
-			"balance":	-281.20001220703125,
+			"balance":	0,
 			"wins":	0,
-			"losses":	1,
+			"losses":	0,
 			"is_ai":	true
 		}, {
-			"first_name":	"midjndsklnvd",
-			"last_name":	"demfemfk",
-			"balance":	10,
+			"first_name":	"player",
+			"last_name":	"one",
+			"balance":	0,
 			"wins":	0,
 			"losses":	0,
 			"is_ai":	false
 		}, {
-			"first_name":	"efeff",
-			"last_name":	"fwef",
-			"balance":	10,
+			"first_name":	"player",
+			"last_name":	"two",
+			"balance":	0,
 			"wins":	0,
 			"losses":	0,
 			"is_ai":	false
