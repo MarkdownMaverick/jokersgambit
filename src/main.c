@@ -1,8 +1,9 @@
-#include "include/main.h"
-#include "include/gui.h"
-#include "include/aibots.h"
-#include "include/mainmenu.h"
-#include "include/useraccount.h"
+#include "main.h"
+#include "gui.h"
+#include "aibots.h"
+#include "mainmenu.h"
+#include "useraccount.h"
+
 Texture2D g_card_back_texture = {0};
 Texture2D g_background_texture = {0};
 Texture2D g_ui_frame_texture = {0};
@@ -17,6 +18,7 @@ Sound g_joker_sound = {0};
 Sound g_matching_jokers_sound = {0};
 Sound g_matching_cards_sound = {0};
 Sound g_continue_sound = {0};
+Sound g_coin_sound = {0};
 
 Music g_background_music = {0}; // <--- ADDED: Background music definition
 
@@ -287,7 +289,7 @@ void ResolveDiscards(GameState *g)
 
     g->p1_done_placing = false;
     g->p2_done_placing = false;
-    g->total_moves++;
+    g->total_rounds++;
 }
 
 void RefreshHands(GameState *g)
@@ -305,11 +307,11 @@ void RefreshHands(GameState *g)
     g->p1_hand_size = g->p2_hand_size = HAND_SIZE;
 }
 
-float CalculateFinalScore(float balance, int total_moves, bool is_winner)
+float CalculateFinalScore(float balance, int total_rounds, bool is_winner)
 {
-    if (total_moves <= 0)
+    if (total_rounds <= 0)
         return balance;
-    float move_bonus = is_winner ? (10.0f * total_moves) : (-10.0f * total_moves);
+    float move_bonus = is_winner ? (10.0f * total_rounds) : (-10.0f * total_rounds);
     return balance + move_bonus;
 }
 
@@ -347,10 +349,10 @@ void AddLeaderboardEntry(GameState *g, int winner)
         snprintf(e->entry_name, 64, "%s_vs_%s", p1_name_str, p2_name_str);
 
     e->final_balance = (winner == 1) ? g->p1_balance : g->p2_balance;
-    float final_score_winner = CalculateFinalScore(e->final_balance, g->total_moves, true);
+    float final_score_winner = CalculateFinalScore(e->final_balance, g->total_rounds, true);
     e->total_winnings = final_score_winner;
     e->bonus = e->total_winnings - e->final_balance;
-    e->total_moves = g->total_moves;
+    e->total_rounds = g->total_rounds;
 
     snprintf(e->winner_name, 32, "%s", (winner == 1) ? p1_name_str : p2_name_str);
 
@@ -374,7 +376,7 @@ void InitGame(GameState *g)
     int saved_leaderboard_count = g->leaderboard_count;
     AIType saved_opponent_ai = g->selected_opponent_ai;
     bool saved_cover = g->cover_p2_cards;
-    bool saved_sort = g->leaderboard_sort_by_moves;
+    bool saved_sort = g->leaderboard_sort_by_rounds;
 
     memcpy(saved_accounts, g->accounts, sizeof(saved_accounts));
     memcpy(saved_leaderboard, g->leaderboard, sizeof(saved_leaderboard));
@@ -390,7 +392,7 @@ void InitGame(GameState *g)
     g->leaderboard_count = saved_leaderboard_count;
     g->selected_opponent_ai = saved_opponent_ai;
     g->cover_p2_cards = saved_cover;
-    g->leaderboard_sort_by_moves = saved_sort;
+    g->leaderboard_sort_by_rounds = saved_sort;
 
     Rank keys[5] = {RANK_ACE, RANK_KING, RANK_QUEEN, RANK_JACK, RANK_10};
     int idx = 0;
@@ -480,7 +482,7 @@ void InitGame(GameState *g)
 
     g->state = STATE_P1_SELECT_DISCARD;
     g->p1_completed_ranks = g->p2_completed_ranks = 0;
-    g->total_moves = 0;
+    g->total_rounds = 0;
     g->placement_phases_count = 0;
     g->p1_done_placing = g->p2_done_placing = false;
     g->game_over = false;
@@ -497,6 +499,7 @@ void RestartGameKeepingAccounts(GameState *g)
 int main(void)
 {
     srand((unsigned)time(NULL));
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(SCREEN_W, SCREEN_H, "JOKERS GAMBIT");
     SetTargetFPS(60);
     InitAudioDevice(); // Initialize audio device
@@ -514,8 +517,8 @@ int main(void)
 
     // 🎵 NEW: Load and start the background music stream
     g_background_music = LoadMusicStream("sfx/track.mp3"); // <--- REPLACE WITH YOUR PATH
-    SetMusicVolume(g_background_music, 0.4f); // Adjust volume (e.g., 40%)
-    PlayMusicStream(g_background_music); // Start playing
+    SetMusicVolume(g_background_music, 0.4f);              // Adjust volume (e.g., 40%)
+    PlayMusicStream(g_background_music);                   // Start playing
 
     // Optional: Adjust sound volume
     SetSoundVolume(g_discard_sound, 0.5f);
@@ -580,7 +583,7 @@ int main(void)
                 Rectangle sort_btn = {CENTER_X + 400, 130, 200, 50};
                 if (CheckCollisionPointRec(mouse, sort_btn))
                 {
-                    g.leaderboard_sort_by_moves = !g.leaderboard_sort_by_moves;
+                    g.leaderboard_sort_by_rounds = !g.leaderboard_sort_by_rounds;
                 }
                 else if (!CheckCollisionPointRec(mouse, menu_btn_rect))
                 {
@@ -667,8 +670,8 @@ int main(void)
                 g.state = STATE_GAME_OVER;
                 g.win_timer_start = GetTime();
 
-                g.final_score_p1 = CalculateFinalScore(g.p1_balance, g.total_moves, g.winner == 1);
-                g.final_score_p2 = CalculateFinalScore(g.p2_balance, g.total_moves, g.winner == 2);
+                g.final_score_p1 = CalculateFinalScore(g.p1_balance, g.total_rounds, g.winner == 1);
+                g.final_score_p2 = CalculateFinalScore(g.p2_balance, g.total_rounds, g.winner == 2);
 
                 g.p1_balance = g.final_score_p1;
                 g.p2_balance = g.final_score_p2;
@@ -715,7 +718,7 @@ int main(void)
                 }
                 if ((g.mode == MODE_PVAI || g.mode == MODE_AIVSAI) && !g.p2_done_placing)
                 {
-                    if (g.mode == MODE_PVAI || g.p1_ai_done_placing_moves)
+                    if (g.mode == MODE_PVAI || g.p1_ai_done_placing_rounds)
                     {
                         AI_UpdatePlacementPhase(&g, 2);
                     }
@@ -723,7 +726,7 @@ int main(void)
                 if (g.p1_done_placing && g.p2_done_placing)
                 {
                     g.state = STATE_BLOCK_DECAY;
-                    g.p1_ai_done_placing_moves = false;
+                    g.p1_ai_done_placing_rounds = false;
                 }
             }
 
@@ -789,6 +792,7 @@ int main(void)
                     }
                     if (skip_placement_pressed)
                         g.p1_done_placing = true;
+                    PlaySound(g_coin_sound);
                 }
 
                 if (g.mode == MODE_PVP && !g.p2_done_placing)
@@ -839,6 +843,7 @@ int main(void)
                     }
                     if (skip_placement_pressed)
                         g.p2_done_placing = true;
+                    PlaySound(g_coin_sound);
                 }
             }
 
@@ -923,7 +928,7 @@ int main(void)
         }
         EndDrawing();
     }
-
+    // Unload resources
     UnloadTexture(g_card_back_texture);
     UnloadTexture(g_background_texture);
     UnloadTexture(g_ui_frame_texture);
@@ -937,8 +942,7 @@ int main(void)
     UnloadSound(g_matching_jokers_sound);
     UnloadSound(g_matching_cards_sound);
     UnloadSound(g_continue_sound);
-
-    UnloadMusicStream(g_background_music); // <--- ADDED: Unload the music stream
+    UnloadMusicStream(g_background_music);
 
     CloseAudioDevice();
     CloseWindow();
