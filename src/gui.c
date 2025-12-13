@@ -333,16 +333,12 @@ void DrawPlayerUI(const GameState *g, int player)
     float adjusted_y = UI_Y - 120;
     // Always draw the continue button, but maybe grey it out if not their turn
     bool can_click = (player == 1) ? !g->p1_done_placing : !g->p2_done_placing;
-    Color p_color = (player == 1) ? BLUE : RED;
 
     Rectangle btn = ButtonRect(player, 0);
 
     // Draw the button with the enabled state
     DrawButton(btn, CheckCollisionPointRec(GetMousePosition(), btn), can_click, "CONTINUE");
 
-    // Display the account balance
-    DrawText(TextFormat("$%.2f", (player == 1) ? g->p1_balance : g->p2_balance),
-             (int)btn.x, (int)btn.y + 90, 20, p_color);
 
     Rectangle frame_rect = (player == 1) ? (Rectangle){P1_UI_X, adjusted_y, UI_FRAME_W, UI_FRAME_H}
                                          : (Rectangle){P2_UI_X, adjusted_y, UI_FRAME_W, UI_FRAME_H};

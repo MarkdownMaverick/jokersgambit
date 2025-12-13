@@ -3,14 +3,17 @@
 #include "aibots.h"
 #include "mainmenu.h"
 #include "useraccount.h"
-
+#define GAME_WIDTH 1900
+#define GAME_HEIGHT 1080
+#define MAX_SCALE 1.0f
+float scale = 1.0f;
+Vector2 offset = {0, 0};
 Texture2D g_card_back_texture = {0};
 Texture2D g_background_texture = {0};
 Texture2D g_ui_frame_texture = {0};
 Texture2D g_button_texture = {0};
 Sound g_discard_sound = {0};
 Sound g_place_sound = {0};
-
 Sound g_filled_rank_sound = {0};
 Sound g_reveal_sound = {0};
 Sound g_win_sound = {0};
@@ -19,11 +22,8 @@ Sound g_matching_jokers_sound = {0};
 Sound g_matching_cards_sound = {0};
 Sound g_continue_sound = {0};
 Sound g_coin_sound = {0};
-
 Music g_background_music = {0}; // <--- ADDED: Background music definition
-
 GameState g_initial_state = {0};
-
 float GetRewardMultiplier(int completed_ranks)
 {
     if (completed_ranks >= 2)
@@ -32,7 +32,6 @@ float GetRewardMultiplier(int completed_ranks)
         return 2.0f;
     return 1.0f;
 }
-
 Card BlankCard(void)
 {
     Card c = {0};
@@ -40,7 +39,6 @@ Card BlankCard(void)
     c.texture = (Texture2D){0};
     return c;
 }
-
 static void BuildFilename(Card *c)
 {
     if (c->rank == RANK_JOKER)
@@ -51,7 +49,6 @@ static void BuildFilename(Card *c)
     }
     char rank_str[4] = {0};
     char suit_char = ' ';
-
     switch (c->rank)
     {
     case RANK_2:
@@ -97,7 +94,6 @@ static void BuildFilename(Card *c)
         strcpy(rank_str, "ERR");
         break;
     }
-
     switch (c->suit)
     {
     case SUIT_CLUBS:
@@ -116,10 +112,8 @@ static void BuildFilename(Card *c)
         suit_char = 'X';
         break;
     }
-
     sprintf(c->filename, "%s%c.png", rank_str, suit_char);
 }
-
 static void LoadCardTexture(Card *c, const char *path)
 {
     if (c->rank != RANK_JOKER || strlen(c->filename) == 0)
@@ -129,7 +123,6 @@ static void LoadCardTexture(Card *c, const char *path)
     c->texture = LoadTexture(full);
     c->is_valid = (c->texture.id != 0);
 }
-
 static bool IsRankCompleted(const Card slots[3])
 {
     int count = 0;
@@ -138,7 +131,6 @@ static bool IsRankCompleted(const Card slots[3])
             count++;
     return count == 3;
 }
-
 void CheckRankCompletionBonus(GameState *g, int player, int key_idx, int cards_before)
 {
     Card(*slots)[3] = (player == 1) ? g->p1_slots : g->p2_slots;
@@ -158,7 +150,6 @@ void CheckRankCompletionBonus(GameState *g, int player, int key_idx, int cards_b
         PlaySound(g_filled_rank_sound);
     }
 }
-
 Card DrawFromDeck(GameState *g)
 {
     if (g->top_card_index < 0)
@@ -167,7 +158,6 @@ Card DrawFromDeck(GameState *g)
     g->current_deck_size--;
     return c;
 }
-
 void ReturnToDeck(GameState *g, Card c)
 {
     if (!c.is_valid || g->current_deck_size >= TOTAL_DECK_CARDS)
@@ -182,7 +172,6 @@ void ReturnToDeck(GameState *g, Card c)
         g->deck[r] = t;
     }
 }
-
 static void TriggerSweep(GameState *g, int player)
 {
     for (int k = 0; k < KEYCARDS; k++)
@@ -213,7 +202,6 @@ static void TriggerSweep(GameState *g, int player)
         }
     }
 }
-
 static void JokersGambit(GameState *g)
 {
     TriggerSweep(g, 0);
@@ -221,7 +209,6 @@ static void JokersGambit(GameState *g)
         ReturnToDeck(g, g->player1_hand[i]);
     for (int i = 0; i < g->p2_hand_size; i++)
         ReturnToDeck(g, g->player2_hand[i]);
-
     for (int i = 0; i < HAND_SIZE; i++)
     {
         g->player1_hand[i] = DrawFromDeck(g);
@@ -229,20 +216,16 @@ static void JokersGambit(GameState *g)
     }
     g->p1_hand_size = g->p2_hand_size = HAND_SIZE;
 }
-
 void ResolveDiscards(GameState *g)
 {
     Card d1 = g->revealed_p1;
     Card d2 = g->revealed_p2;
     bool j1 = (d1.rank == RANK_JOKER);
     bool j2 = (d2.rank == RANK_JOKER);
-
     g->p1_balance -= COST_DISCARD;
     g->p2_balance -= COST_DISCARD;
-
     float mult1 = GetRewardMultiplier(g->p1_completed_ranks);
     float mult2 = GetRewardMultiplier(g->p2_completed_ranks);
-
     if (j1 && j2)
     {
         JokersGambit(g);
@@ -286,19 +269,16 @@ void ResolveDiscards(GameState *g)
         ReturnToDeck(g, d1);
         ReturnToDeck(g, d2);
     }
-
     g->p1_done_placing = false;
     g->p2_done_placing = false;
     g->total_rounds++;
 }
-
 void RefreshHands(GameState *g)
 {
     for (int i = 0; i < g->p1_hand_size; i++)
         ReturnToDeck(g, g->player1_hand[i]);
     for (int i = 0; i < g->p2_hand_size; i++)
         ReturnToDeck(g, g->player2_hand[i]);
-
     for (int i = 0; i < HAND_SIZE; i++)
     {
         g->player1_hand[i] = DrawFromDeck(g);
@@ -306,7 +286,6 @@ void RefreshHands(GameState *g)
     }
     g->p1_hand_size = g->p2_hand_size = HAND_SIZE;
 }
-
 float CalculateFinalScore(float balance, int total_rounds, bool is_winner)
 {
     if (total_rounds <= 0)
@@ -314,7 +293,6 @@ float CalculateFinalScore(float balance, int total_rounds, bool is_winner)
     float move_bonus = is_winner ? (10.0f * total_rounds) : (-10.0f * total_rounds);
     return balance + move_bonus;
 }
-
 void UpdateWinStats(GameState *g)
 {
     g->p1_completed_ranks = 0;
@@ -327,7 +305,6 @@ void UpdateWinStats(GameState *g)
             g->p2_completed_ranks++;
     }
 }
-
 void AddLeaderboardEntry(GameState *g, int winner)
 {
     if (g->leaderboard_count >= MAX_LEADERBOARD_ENTRIES)
@@ -336,35 +313,28 @@ void AddLeaderboardEntry(GameState *g, int winner)
             g->leaderboard[i] = g->leaderboard[i + 1];
         g->leaderboard_count = MAX_LEADERBOARD_ENTRIES - 1;
     }
-
     LeaderboardEntry *e = &g->leaderboard[g->leaderboard_count];
     const char *p1_name_str = GetPlayerName(g, 1);
     const char *p2_name_str = GetPlayerName(g, 2);
-
     if (g->mode == MODE_PVAI)
         snprintf(e->entry_name, 64, "%s_vs_%s", p1_name_str, p2_name_str);
     else if (g->mode == MODE_PVP)
         snprintf(e->entry_name, 64, "%s_vs_%s", p1_name_str, p2_name_str);
     else
         snprintf(e->entry_name, 64, "%s_vs_%s", p1_name_str, p2_name_str);
-
     e->final_balance = (winner == 1) ? g->p1_balance : g->p2_balance;
     float final_score_winner = CalculateFinalScore(e->final_balance, g->total_rounds, true);
     e->total_winnings = final_score_winner;
     e->bonus = e->total_winnings - e->final_balance;
     e->total_rounds = g->total_rounds;
-
     snprintf(e->winner_name, 32, "%s", (winner == 1) ? p1_name_str : p2_name_str);
-
     time_t timer;
     time(&timer);
     struct tm *tm_info = localtime(&timer);
     strftime(e->timestamp, 32, "%m/%d/%y", tm_info);
     g->leaderboard_count++;
-
     SaveLeaderboard(g);
 }
-
 void InitGame(GameState *g)
 {
     Account saved_accounts[MAX_ACCOUNTS];
@@ -377,12 +347,9 @@ void InitGame(GameState *g)
     AIType saved_opponent_ai = g->selected_opponent_ai;
     bool saved_cover = g->cover_p2_cards;
     bool saved_sort = g->leaderboard_sort_by_rounds;
-
     memcpy(saved_accounts, g->accounts, sizeof(saved_accounts));
     memcpy(saved_leaderboard, g->leaderboard, sizeof(saved_leaderboard));
-
     *g = (GameState){0};
-
     memcpy(g->accounts, saved_accounts, sizeof(saved_accounts));
     memcpy(g->leaderboard, saved_leaderboard, sizeof(saved_leaderboard));
     g->account_count = saved_account_count;
@@ -393,10 +360,8 @@ void InitGame(GameState *g)
     g->selected_opponent_ai = saved_opponent_ai;
     g->cover_p2_cards = saved_cover;
     g->leaderboard_sort_by_rounds = saved_sort;
-
     Rank keys[5] = {RANK_ACE, RANK_KING, RANK_QUEEN, RANK_JACK, RANK_10};
     int idx = 0;
-
     for (int s = 0; s < 4; s++)
     {
         for (int r = 0; r < 13; r++)
@@ -411,7 +376,6 @@ void InitGame(GameState *g)
             }
         }
     }
-
     for (int i = 0; i < 2; i++)
     {
         g->deck[idx] = (Card){.rank = RANK_JOKER, .suit = SUIT_NONE};
@@ -420,16 +384,13 @@ void InitGame(GameState *g)
         if (g->deck[idx].is_valid)
             idx++;
     }
-
     g->current_deck_size = idx;
     g->top_card_index = idx - 1;
-
     for (int i = 0; i < KEYCARDS; i++)
     {
         g->keycards[i] = (Card){.rank = keys[i], .suit = SUIT_HEARTS};
         LoadCardTexture(&g->keycards[i], "keycards/");
     }
-
     for (int i = g->top_card_index; i > 0; i--)
     {
         int j = rand() % (i + 1);
@@ -437,14 +398,12 @@ void InitGame(GameState *g)
         g->deck[i] = g->deck[j];
         g->deck[j] = t;
     }
-
     for (int i = 0; i < HAND_SIZE; i++)
     {
         g->player1_hand[i] = DrawFromDeck(g);
         g->player2_hand[i] = DrawFromDeck(g);
     }
     g->p1_hand_size = g->p2_hand_size = HAND_SIZE;
-
     if (g->p1_account_index != -1)
     {
         g->p1_balance = (float)g->accounts[g->p1_account_index].balance;
@@ -453,7 +412,6 @@ void InitGame(GameState *g)
     {
         g->p1_balance = 10.0f;
     }
-
     if (g->p2_account_index != -1)
     {
         g->p2_balance = (float)g->accounts[g->p2_account_index].balance;
@@ -479,7 +437,7 @@ void InitGame(GameState *g)
     {
         g->p2_balance = 10.0f;
     }
-
+    g->state = STATE_ROUND_START;
     g->state = STATE_P1_SELECT_DISCARD;
     g->p1_completed_ranks = g->p2_completed_ranks = 0;
     g->total_rounds = 0;
@@ -488,14 +446,22 @@ void InitGame(GameState *g)
     g->game_over = false;
     g->p1_selected = g->p2_selected = false;
 }
-
 void RestartGameKeepingAccounts(GameState *g)
 {
     InitGame(g);
     g->p1_balance = (g->p1_account_index != -1) ? (float)g->accounts[g->p1_account_index].balance : 10.0f;
     g->p2_balance = (g->p2_account_index != -1) ? (float)g->accounts[g->p2_account_index].balance : 10.0f;
 }
-
+void UpdateScale()
+{
+    int screenW = GetScreenWidth();
+    int screenH = GetScreenHeight();
+    float scaleX = (float)screenW / GAME_WIDTH;
+    float scaleY = (float)screenH / GAME_HEIGHT;
+    scale = fminf(fminf(scaleX, scaleY), MAX_SCALE);
+    offset.x = (screenW - (GAME_WIDTH * scale)) / 2.0f;
+    offset.y = (screenH - (GAME_HEIGHT * scale)) / 2.0f;
+}
 int main(void)
 {
     srand((unsigned)time(NULL));
@@ -503,7 +469,6 @@ int main(void)
     InitWindow(SCREEN_W, SCREEN_H, "JOKERS GAMBIT");
     SetTargetFPS(60);
     InitAudioDevice(); // Initialize audio device
-
     // 👇 Load all Sound effects
     g_discard_sound = LoadSound("sfx/discard.wav");
     g_filled_rank_sound = LoadSound("sfx/filledrank.wav");
@@ -514,21 +479,17 @@ int main(void)
     g_matching_jokers_sound = LoadSound("sfx/twojokers.wav");
     g_matching_cards_sound = LoadSound("sfx/matchingcards.wav");
     g_continue_sound = LoadSound("sfx/continue.wav");
-
     // 🎵 NEW: Load and start the background music stream
     g_background_music = LoadMusicStream("sfx/track.mp3"); // <--- REPLACE WITH YOUR PATH
     SetMusicVolume(g_background_music, 0.4f);              // Adjust volume (e.g., 40%)
     PlayMusicStream(g_background_music);                   // Start playing
-
     // Optional: Adjust sound volume
     SetSoundVolume(g_discard_sound, 0.5f);
     SetSoundVolume(g_filled_rank_sound, 0.7f);
-
     g_card_back_texture = LoadTexture("keycards/BACK.png");
     g_background_texture = LoadTexture("keycards/background.png");
     g_ui_frame_texture = LoadTexture("keycards/frame.png");
     g_button_texture = LoadTexture("keycards/btn.png");
-
     GameState g;
     InitAccounts(&g);
     LoadAllAccounts(&g);
@@ -537,18 +498,17 @@ int main(void)
     g.state = STATE_MAIN_MENU;
     g.account_status_message[0] = '\0';
     g.account_status_timer = 0.0;
-
     while (!WindowShouldClose())
     {
         // 🎵 NEW: Essential call to update the music stream every frame
         UpdateMusicStream(g_background_music);
-
         Vector2 mouse = GetMousePosition();
+        mouse.x = (mouse.x - offset.x) / scale;
+        mouse.y = (mouse.y - offset.y) / scale;
         Rectangle menu_btn_rect = {40, 20, 300, 70};
         Rectangle restart_btn_rect = {SCREEN_W - 340, 20, 300, 70};
         Rectangle skip_btn_rect = {CENTER_X - 150, SCREEN_H - 120, 300, 60};
         bool game_active = (g.state >= STATE_P1_SELECT_DISCARD && g.state <= STATE_CHECK_WIN);
-
         // Menu/Restart button handling
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
         {
@@ -576,7 +536,6 @@ int main(void)
                 RestartGameKeepingAccounts(&g);
                 g.state = STATE_P1_SELECT_DISCARD;
             }
-
             // Leaderboard sort button
             if (g.state == STATE_LEADERBOARD)
             {
@@ -590,14 +549,12 @@ int main(void)
                     g.state = STATE_MAIN_MENU;
                 }
             }
-
             // Game Over screen buttons
             if (g.state == STATE_GAME_OVER)
             {
                 Rectangle restart_btn = {CENTER_X - 450, SCREEN_H - 150, 280, 80};
                 Rectangle menu_btn = {CENTER_X - 140, SCREEN_H - 150, 280, 80};
                 Rectangle quit_btn = {CENTER_X + 170, SCREEN_H - 150, 280, 80};
-
                 if (CheckCollisionPointRec(mouse, restart_btn))
                 {
                     RestartGameKeepingAccounts(&g);
@@ -613,7 +570,6 @@ int main(void)
                 }
             }
         }
-
         // State updates
         if (g.state == STATE_MAIN_MENU)
         {
@@ -635,15 +591,12 @@ int main(void)
         {
             g.revealed_p1 = g.player1_hand[g.p1_discard_idx];
             g.revealed_p2 = g.player2_hand[g.p2_discard_idx];
-
             for (int i = g.p1_discard_idx; i < g.p1_hand_size - 1; i++)
                 g.player1_hand[i] = g.player1_hand[i + 1];
             g.p1_hand_size--;
-
             for (int i = g.p2_discard_idx; i < g.p2_hand_size - 1; i++)
                 g.player2_hand[i] = g.player2_hand[i + 1];
             g.p2_hand_size--;
-
             ResolveDiscards(&g);
             g.p1_selected = false;
             g.p2_selected = false;
@@ -669,13 +622,10 @@ int main(void)
                 g.game_over = true;
                 g.state = STATE_GAME_OVER;
                 g.win_timer_start = GetTime();
-
                 g.final_score_p1 = CalculateFinalScore(g.p1_balance, g.total_rounds, g.winner == 1);
                 g.final_score_p2 = CalculateFinalScore(g.p2_balance, g.total_rounds, g.winner == 2);
-
                 g.p1_balance = g.final_score_p1;
                 g.p2_balance = g.final_score_p2;
-
                 UpdateAccountBalances(&g);
                 AddLeaderboardEntry(&g, g.winner);
                 PlaySound(g_win_sound); // Sound for winning the game
@@ -695,10 +645,30 @@ int main(void)
                 g.state = STATE_P1_SELECT_DISCARD;
             }
         }
-
         // Game logic
         if (game_active)
         {
+            if (g.state == STATE_ROUND_START)
+            {
+                // Show continue buttons for both players
+                // No charges on first round start
+                DrawText("Press CONTINUE to begin round", CENTER_X - 200, 400, 30, GOLD);
+                // Same continue button logic as placement phase but without cost
+                if (g.p1_done_placing)
+                {
+                    g.state = STATE_P1_SELECT_DISCARD;
+                    g.p1_done_placing = false;
+                    // Clear any cards in discard slots
+                    g.revealed_p1 = BlankCard();
+                }
+                if (g.p2_done_placing)
+                {
+                    g.state = STATE_P1_SELECT_DISCARD;
+                    g.p2_done_placing = false;
+                    // Clear any cards in discard slots
+                    g.revealed_p2 = BlankCard();
+                }
+            }
             if (g.mode == MODE_AIVSAI && g.state == STATE_P1_SELECT_DISCARD)
             {
                 AI_SelectDiscard(&g, 1);
@@ -729,21 +699,18 @@ int main(void)
                     g.p1_ai_done_placing_rounds = false;
                 }
             }
-
             bool skip_placement_pressed = IsKeyPressed(KEY_SPACE);
             if (CheckCollisionPointRec(mouse, skip_btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
             {
                 skip_placement_pressed = true;
                 PlaySound(g_continue_sound); // Added sound for continue button
             }
-
             if (g.state == STATE_WAIT_FOR_TURN)
             {
                 float mult1 = GetRewardMultiplier(g.p1_completed_ranks);
                 float mult2 = GetRewardMultiplier(g.p2_completed_ranks);
                 float reward1 = REWARD_PLACEMENT * mult1;
                 float reward2 = REWARD_PLACEMENT * mult2;
-
                 if (g.mode != MODE_AIVSAI && !g.p1_done_placing)
                 {
                     for (int i = 0; i < g.p1_hand_size; i++)
@@ -763,7 +730,6 @@ int main(void)
                                         for (int s_check = 0; s_check < 3; s_check++)
                                             if (g.p1_slots[k][s_check].is_valid)
                                                 cards_before++;
-
                                         if (cards_before < 3)
                                         {
                                             for (int s = 0; s < 3; s++)
@@ -794,7 +760,6 @@ int main(void)
                         g.p1_done_placing = true;
                     PlaySound(g_coin_sound);
                 }
-
                 if (g.mode == MODE_PVP && !g.p2_done_placing)
                 {
                     for (int i = 0; i < g.p2_hand_size; i++)
@@ -814,7 +779,6 @@ int main(void)
                                         for (int s_check = 0; s_check < 3; s_check++)
                                             if (g.p2_slots[k][s_check].is_valid)
                                                 cards_before++;
-
                                         if (cards_before < 3)
                                         {
                                             for (int s = 0; s < 3; s++)
@@ -846,7 +810,6 @@ int main(void)
                     PlaySound(g_coin_sound);
                 }
             }
-
             // Human discard selection
             if ((g.state == STATE_P1_SELECT_DISCARD && g.mode != MODE_AIVSAI) ||
                 (g.state == STATE_P2_SELECT_DISCARD && g.mode == MODE_PVP))
@@ -855,7 +818,6 @@ int main(void)
                 int hand_size = (player == 1) ? g.p1_hand_size : g.p2_hand_size;
                 bool *selected_ptr = (player == 1) ? &g.p1_selected : &g.p2_selected;
                 int *idx_ptr = (player == 1) ? &g.p1_discard_idx : &g.p2_discard_idx;
-
                 if (!*selected_ptr)
                 {
                     for (int i = 0; i < hand_size; i++)
@@ -876,14 +838,18 @@ int main(void)
                 }
             }
         }
-
         // Drawing
         BeginDrawing();
+        ClearBackground(BLACK); // Black letterbox
+        BeginMode2D((Camera2D){
+            .offset = offset,
+            .target = {0, 0},
+            .rotation = 0.0f,
+            .zoom = scale});
         if (g_background_texture.id)
             DrawTexture(g_background_texture, 0, 0, RAYWHITE);
         else
             ClearBackground(RAYWHITE);
-
         if (g.state == STATE_MAIN_MENU)
         {
             DrawMainMenu(&g);
@@ -911,14 +877,12 @@ int main(void)
         else
         {
             DrawGameLayout(&g);
-
             if (g.state == STATE_WAIT_FOR_TURN && g.mode != MODE_AIVSAI)
             {
                 bool skip_hover = CheckCollisionPointRec(mouse, skip_btn_rect);
                 DrawRectangleRec(skip_btn_rect, skip_hover ? GOLD : ORANGE);
                 DrawText("CONTINUE", (int)skip_btn_rect.x + 15, (int)skip_btn_rect.y + 20, 25, BLACK);
             }
-
             bool menu_hover = CheckCollisionPointRec(mouse, menu_btn_rect);
             bool restart_hover = CheckCollisionPointRec(mouse, restart_btn_rect);
             DrawRectangleRec(menu_btn_rect, menu_hover ? LIME : DARKGREEN);
@@ -926,7 +890,9 @@ int main(void)
             DrawText("MAIN MENU", (int)menu_btn_rect.x + 40, (int)menu_btn_rect.y + 20, 30, WHITE);
             DrawText("RESTART", (int)restart_btn_rect.x + 60, (int)restart_btn_rect.y + 20, 30, WHITE);
         }
+        EndMode2D();
         EndDrawing();
+        UpdateScale();
     }
     // Unload resources
     UnloadTexture(g_card_back_texture);
@@ -942,8 +908,8 @@ int main(void)
     UnloadSound(g_matching_jokers_sound);
     UnloadSound(g_matching_cards_sound);
     UnloadSound(g_continue_sound);
+    UnloadSound(g_coin_sound);
     UnloadMusicStream(g_background_music);
-
     CloseAudioDevice();
     CloseWindow();
     return 0;
