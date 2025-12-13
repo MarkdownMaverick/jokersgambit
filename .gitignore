@@ -6,3 +6,4 @@ obj/mainmenu.o
 obj/useraccount.o
 accounts.json
 leaderboard.json
+track.mp3
