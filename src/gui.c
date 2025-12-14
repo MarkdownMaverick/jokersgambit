@@ -2,7 +2,6 @@
 #define UI_FRAME_H 150
 #define P1_UI_X 10
 #define P2_UI_X (SCREEN_W - UI_FRAME_W - 10)
-#define UI_Y 650
 #define UI_TEXT_OFFSET_X 45
 #define UI_LINE_SPACING 20
 #define P1_HAND_Y (SCREEN_H - CARD_H_SCALED - 130)
@@ -491,6 +490,6 @@ void DrawGameLayout(const GameState *g)
         // Placeholder for P2 Discard
         DrawTexturePro(g_card_back_texture,
                        (Rectangle){0, 0, (float)g_card_back_texture.width, (float)g_card_back_texture.height},
-                       d2_rect, (Vector2){0, 0}, 0.0f, Fade(WHITE, 0.25f));
+                       d2_rect, (Vector2){0, 0}, 0.0f, Fade(WHITE, 1.00f));
     }
 }
