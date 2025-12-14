@@ -10,10 +10,9 @@
 #include <math.h>
 
 #define SCREEN_W 1900
-#define SCREEN_H 1000
-
+#define SCREEN_H 1080
+#define UI_Y (SCREEN_H * 0.6f)
 #define SPEED_BONUS_BASE 500.00f
-#define IDEAL_rounds 100
 #define BONUS_CAP 1000.00f
 
 #define HAND_SIZE 5
@@ -28,12 +27,12 @@
 #define MAX_ACCOUNT_NAME_LEN 12
 #define MAX_LEADERBOARD_ENTRIES 100
 
-#define COST_DISCARD 0.50f
+#define COST_DISCARD 1.00f
 #define REWARD_MATCH 10.00f
-#define REWARD_DOUBLE_JOKER 5.00f
-#define REWARD_PLACEMENT 1.00f
-#define REWARD_COMPLETION 5.00f
-#define PENALTY_JOKER 5.00f
+#define REWARD_DOUBLE_JOKER 50.00f
+#define REWARD_PLACEMENT 2.00f
+#define REWARD_COMPLETION 15.00f
+#define JOKER_DISCARD 5.00f
 
 #define CENTER_X (SCREEN_W / 2.0f)
 #define GRID_START_Y 50
@@ -168,13 +167,10 @@ typedef struct
     bool p2_selected;
     Card revealed_p1;
     Card revealed_p2;
-
-    Card pending_discard_p1;
-    Card pending_discard_p2;
-    bool discards_pending;
-
-    Card p1_gambit_slot;
-    Card p2_gambit_slot;
+    // This will be used to delay the discard resolution until placement animations are done
+    Card delay_discard_p1;  // Added for discard delay
+    Card delay_discard_p2;  // Added for discard delay
+    bool discards_pending;  // Flag to indicate pending discards
 
     GameStateEnum state;
     GameMode mode;
@@ -208,7 +204,7 @@ typedef struct
 
     char account_status_message[128];
     double account_status_timer;
-
+   
     bool cover_p2_cards;
 } GameState;
 
@@ -226,6 +222,7 @@ extern Sound g_matching_jokers_sound;
 extern Sound g_matching_cards_sound;
 extern Sound g_continue_sound;
 extern Sound g_coin_sound;
+extern Sound g_beep_sound;
 extern Music g_background_music;
 
 Card DrawFromDeck(GameState *g);
@@ -234,12 +231,13 @@ float GetRewardMultiplier(int completed_ranks);
 void RestartGameKeepingAccounts(GameState *g);
 Card BlankCard(void);
 float CalculateFinalScore(float balance, int total_rounds, bool is_winner);
+void ProcessPendingDiscards(GameState *g);
 void ResolveDiscards(GameState *g);
 void RefreshHands(GameState *g);
 void UpdateWinStats(GameState *g);
 void CompleteRound(GameState *g);
 
-const char *GetPlayerName(const GameState *g, int player);
+//const char *GetPlayerName(const GameState *g, int player);
 void UpdateAccountBalances(GameState *g);
 void LoadAllAccounts(GameState *g);
 void SaveAllAccounts(const GameState *g);
