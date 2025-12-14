@@ -12,6 +12,7 @@ Texture2D g_card_back_texture = {0};
 Texture2D g_background_texture = {0};
 Texture2D g_ui_frame_texture = {0};
 Texture2D g_button_texture = {0};
+Texture2D g_temp_cover_texture = {0};
 Sound g_discard_sound = {0};
 Sound g_place_sound = {0};
 Sound g_filled_rank_sound = {0};
@@ -22,6 +23,7 @@ Sound g_matching_jokers_sound = {0};
 Sound g_matching_cards_sound = {0};
 Sound g_continue_sound = {0};
 Sound g_coin_sound = {0};
+Sound g_beep_sound = {0};       // <--- ADDED: Beep sound definition
 Music g_background_music = {0}; // <--- ADDED: Background music definition
 GameState g_initial_state = {0};
 float GetRewardMultiplier(int completed_ranks)
@@ -166,7 +168,7 @@ void ReturnToDeck(GameState *g, Card c)
         return;
     g->deck[++g->top_card_index] = c;
     g->current_deck_size++;
-    if (g->top_card_index > 0 && rand() % 3 == 0)
+    if (g->top_card_index > 0 && rand() % 5 == 0) // 25% chance to shuffle
     {
         int r = rand() % (g->top_card_index + 1);
         Card t = g->deck[g->top_card_index];
@@ -223,18 +225,18 @@ void ResolveDiscards(GameState *g)
 {
     // First, process any pending discards from the PREVIOUS round
     ProcessPendingDiscards(g);
-    
+
     Card d1 = g->revealed_p1;
     Card d2 = g->revealed_p2;
     bool j1 = (d1.rank == RANK_JOKER);
     bool j2 = (d2.rank == RANK_JOKER);
-    
+
     g->p1_balance -= COST_DISCARD;
     g->p2_balance -= COST_DISCARD;
-    
+
     float mult1 = GetRewardMultiplier(g->p1_completed_ranks);
     float mult2 = GetRewardMultiplier(g->p2_completed_ranks);
-    
+
     if (j1 && j2)
     {
         JokersGambit(g);
@@ -242,12 +244,12 @@ void ResolveDiscards(GameState *g)
         g->p2_balance -= JOKER_DISCARD;
         g->p1_balance += (REWARD_DOUBLE_JOKER * mult1);
         g->p2_balance += (REWARD_DOUBLE_JOKER * mult2);
-        
+
         // Store these discards to be returned NEXT round
         g->delay_discard_p1 = d1;
         g->delay_discard_p2 = d2;
         g->discards_pending = true;
-        
+
         PlaySound(g_matching_jokers_sound);
     }
     else if (j1 || j2)
@@ -258,15 +260,15 @@ void ResolveDiscards(GameState *g)
             g->p1_balance -= JOKER_DISCARD;
         if (j2)
             g->p2_balance -= JOKER_DISCARD;
-        
+
         g->player1_hand[g->p1_hand_size++] = DrawFromDeck(g);
         g->player2_hand[g->p2_hand_size++] = DrawFromDeck(g);
-        
+
         // Store these discards to be returned NEXT round
         g->delay_discard_p1 = d1;
         g->delay_discard_p2 = d2;
         g->discards_pending = true;
-        
+
         PlaySound(g_joker_sound);
     }
     else if (d1.rank == d2.rank)
@@ -274,15 +276,15 @@ void ResolveDiscards(GameState *g)
         TriggerSweep(g, 0);
         g->p1_balance += (REWARD_MATCH * mult1);
         g->p2_balance += (REWARD_MATCH * mult2);
-        
+
         g->player1_hand[g->p1_hand_size++] = DrawFromDeck(g);
         g->player2_hand[g->p2_hand_size++] = DrawFromDeck(g);
-        
+
         // Store these discards to be returned NEXT round
         g->delay_discard_p1 = d1;
         g->delay_discard_p2 = d2;
         g->discards_pending = true;
-        
+
         PlaySound(g_matching_cards_sound);
     }
     else
@@ -290,13 +292,13 @@ void ResolveDiscards(GameState *g)
         // Normal discard - no special effect
         g->player1_hand[g->p1_hand_size++] = DrawFromDeck(g);
         g->player2_hand[g->p2_hand_size++] = DrawFromDeck(g);
-        
+
         // Store these discards to be returned NEXT round
         g->delay_discard_p1 = d1;
         g->delay_discard_p2 = d2;
         g->discards_pending = true;
     }
-    
+
     g->p1_done_placing = false;
     g->p2_done_placing = false;
     g->total_rounds++;
@@ -520,7 +522,6 @@ int main(void)
     InitWindow(SCREEN_W, SCREEN_H, "JOKERS GAMBIT");
     SetTargetFPS(60);
     InitAudioDevice(); // Initialize audio device
-    // 👇 Load all Sound effects
     g_discard_sound = LoadSound("sfx/discard.wav");
     g_filled_rank_sound = LoadSound("sfx/filledrank.wav");
     g_win_sound = LoadSound("sfx/win.wav");
@@ -530,6 +531,8 @@ int main(void)
     g_matching_jokers_sound = LoadSound("sfx/twojokers.wav");
     g_matching_cards_sound = LoadSound("sfx/matchingcards.wav");
     g_continue_sound = LoadSound("sfx/continue.wav");
+    g_coin_sound = LoadSound("sfx/coin.wav");
+    g_beep_sound = LoadSound("sfx/beep.wav"); // <--- NEW: Beep sound effect
     // 🎵 NEW: Load and start the background music stream
     g_background_music = LoadMusicStream("sfx/track.mp3"); // <--- REPLACE WITH YOUR PATH
     SetMusicVolume(g_background_music, 0.4f);              // Adjust volume (e.g., 40%)
@@ -541,6 +544,7 @@ int main(void)
     g_background_texture = LoadTexture("keycards/background.png");
     g_ui_frame_texture = LoadTexture("keycards/frame.png");
     g_button_texture = LoadTexture("keycards/btn.png");
+    g_temp_cover_texture = LoadTexture("keycards/temp.png");
     GameState g;
     InitAccounts(&g);
     LoadAllAccounts(&g);
@@ -655,14 +659,46 @@ int main(void)
             g.ai_timer = 0;
             PlaySound(g_reveal_sound); // Added sound for card reveal
         }
-        else if (g.state == STATE_BLOCK_DECAY)
+        else if (g.state == STATE_HAND_RESHUFFLE)
+{
+    g.placement_phases_count++;
+    if (g.placement_phases_count % 5 == 0)
+    {
+        g.state = STATE_COVER_ANIMATION;
+        g.Reshuffle_cover_timer = 2.0f; // Set for 2 seconds
+        PlaySound(g_beep_sound);
+    }
+    else 
+    {
+        g.revealed_p1 = BlankCard();
+        g.revealed_p2 = BlankCard();
+        g.state = STATE_CHECK_WIN;
+    }
+}
+else if (g.state == STATE_COVER_ANIMATION)
+{
+    g.Reshuffle_cover_timer -= GetFrameTime(); // Count down
+    
+    if (g.Reshuffle_cover_timer <= 0)
+    {
+        RefreshHands(&g);
+        g.revealed_p1 = BlankCard();
+        g.revealed_p2 = BlankCard();
+        g.state = STATE_CHECK_WIN;
+    }
+}
+        // NEW STATE LOGIC:
+        else if (g.state == STATE_COVER_ANIMATION)
         {
-            g.placement_phases_count++;
-            if (g.placement_phases_count % 3 == 0)
-                RefreshHands(&g);
-            g.revealed_p1 = BlankCard();
-            g.revealed_p2 = BlankCard();
-            g.state = STATE_CHECK_WIN;
+            g.Reshuffle_cover_timer -= GetFrameTime(); // Decrease timer by delta time
+
+            if (g.Reshuffle_cover_timer <= 0)
+            {
+                RefreshHands(&g); // Refresh hands AFTER the 2 seconds
+                g.revealed_p1 = BlankCard();
+                g.revealed_p2 = BlankCard();
+                g.state = STATE_CHECK_WIN;
+            }
         }
         else if (g.state == STATE_CHECK_WIN)
         {
@@ -746,15 +782,15 @@ int main(void)
                 }
                 if (g.p1_done_placing && g.p2_done_placing)
                 {
-                    g.state = STATE_BLOCK_DECAY;
+                    g.state = STATE_HAND_RESHUFFLE;
                     g.p1_ai_done_placing_rounds = false;
                 }
             }
+
             bool skip_placement_pressed = IsKeyPressed(KEY_SPACE);
             if (CheckCollisionPointRec(mouse, skip_btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
             {
                 skip_placement_pressed = true;
-                PlaySound(g_continue_sound); // Added sound for continue button
             }
             if (g.state == STATE_WAIT_FOR_TURN)
             {
@@ -928,6 +964,35 @@ int main(void)
         else
         {
             DrawGameLayout(&g);
+            if (g.state == STATE_COVER_ANIMATION)
+{  // needs work 
+    int screenW = GetScreenWidth();  // needs work 
+    int cardWidth = 100;  // needs work 
+    int cardHeight = 140;  // needs work 
+    int spacing = 10;  // needs work 
+  // needs work 
+    // --- Cover Player 1 Cards (Bottom) ---  // needs work 
+    float p1_totalWidth = g.p1_hand_size * cardWidth + (g.p1_hand_size - 1) * spacing;  // needs work 
+    float p1_startX = (screenW - p1_totalWidth) / 2;  // needs work 
+  // needs work 
+    for (int i = 0; i < g.p1_hand_size; i++)  // needs work 
+    {  // needs work 
+        Rectangle r = { p1_startX + i * (cardWidth + spacing), 550, (float)cardWidth, (float)cardHeight };  // needs work 
+        DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},   // needs work 
+                       r, (Vector2){0, 0}, 0, WHITE);  // needs work 
+    }  // needs work 
+  // needs work 
+    // --- Cover Player 2/AI Cards (Top) ---  // needs work 
+    float p2_totalWidth = g.p2_hand_size * cardWidth + (g.p2_hand_size - 1) * spacing;  // needs work 
+    float p2_startX = (screenW - p2_totalWidth) / 2;  // needs work 
+  // needs work 
+    for (int i = 0; i < g.p2_hand_size; i++)  // needs work 
+    {  // needs work 
+        Rectangle r = { p2_startX + i * (cardWidth + spacing), 50, (float)cardWidth, (float)cardHeight };  // needs work 
+        DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},   // needs work 
+                       r, (Vector2){0, 0}, 0, WHITE);  // needs work 
+    }  // needs work 
+}  // needs work 
             if (g.state == STATE_WAIT_FOR_TURN && g.mode != MODE_AIVSAI)
             {
                 bool skip_hover = CheckCollisionPointRec(mouse, skip_btn_rect);
@@ -950,6 +1015,8 @@ int main(void)
     UnloadTexture(g_background_texture);
     UnloadTexture(g_ui_frame_texture);
     UnloadTexture(g_button_texture);
+    UnloadTexture(g_temp_cover_texture);
+
     UnloadSound(g_discard_sound);
     UnloadSound(g_filled_rank_sound);
     UnloadSound(g_win_sound);
@@ -960,7 +1027,10 @@ int main(void)
     UnloadSound(g_matching_cards_sound);
     UnloadSound(g_continue_sound);
     UnloadSound(g_coin_sound);
+    UnloadSound(g_beep_sound);
+
     UnloadMusicStream(g_background_music);
+
     CloseAudioDevice();
     CloseWindow();
     return 0;
