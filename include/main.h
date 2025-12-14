@@ -103,7 +103,9 @@ typedef enum
     STATE_P2_SELECT_DISCARD,
     STATE_REVEAL_AND_RESOLVE,
     STATE_WAIT_FOR_TURN,
-    STATE_BLOCK_DECAY,
+    STATE_HAND_RESHUFFLE,
+    STATE_COVER_ANIMATION,
+    STATE_ROUNDS_COMPLETED,
     STATE_CHECK_WIN,
     STATE_GAME_OVER,
     STATE_LEADERBOARD
@@ -168,10 +170,12 @@ typedef struct
     Card revealed_p1;
     Card revealed_p2;
     // This will be used to delay the discard resolution until placement animations are done
-    Card delay_discard_p1;  // Added for discard delay
-    Card delay_discard_p2;  // Added for discard delay
-    bool discards_pending;  // Flag to indicate pending discards
-
+    Card delay_discard_p1; // Added for discard delay
+    Card delay_discard_p2; // Added for discard delay
+    bool discards_pending; // Flag to indicate pending discards
+    bool p1_discard_ready;
+    bool p2_discard_ready;
+    float Reshuffle_cover_timer;
     GameStateEnum state;
     GameMode mode;
 
@@ -204,7 +208,7 @@ typedef struct
 
     char account_status_message[128];
     double account_status_timer;
-   
+
     bool cover_p2_cards;
 } GameState;
 
@@ -212,6 +216,7 @@ extern Texture2D g_card_back_texture;
 extern Texture2D g_background_texture;
 extern Texture2D g_ui_frame_texture;
 extern Texture2D g_button_texture;
+extern Texture2D g_temp_cover_texture;
 extern Sound g_discard_sound;
 extern Sound g_place_sound;
 extern Sound g_filled_rank_sound;
@@ -236,8 +241,9 @@ void ResolveDiscards(GameState *g);
 void RefreshHands(GameState *g);
 void UpdateWinStats(GameState *g);
 void CompleteRound(GameState *g);
+bool IsPlayerAI(const GameState *g, int player);
 
-//const char *GetPlayerName(const GameState *g, int player);
+// const char *GetPlayerName(const GameState *g, int player);
 void UpdateAccountBalances(GameState *g);
 void LoadAllAccounts(GameState *g);
 void SaveAllAccounts(const GameState *g);

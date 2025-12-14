@@ -9,7 +9,7 @@ Rectangle ButtonRect(int player, int idx);
 Rectangle SlotRect(int player, int key_idx, int slot_idx);
 Rectangle KeyCardRect(int key_idx);
 Rectangle DiscardPileRect(int player);
-Rectangle GambitSlotRect(int player);
+Rectangle ContinueButtonRect(int player);
 
 void DrawGameLayout(const GameState *g);
 void DrawPlayerUI(const GameState *g, int player);

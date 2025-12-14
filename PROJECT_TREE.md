@@ -50,6 +50,8 @@
 │   ├── QC.png
 │   ├── QD.png
 │   └── QS.png
+├── credits.md
+├── FUTUREPLANS.md
 ├── generate_tree.sh
 ├── .gitignore
 ├── include
@@ -103,6 +105,7 @@
 ├── screenshot2.png
 ├── screenshot3.png
 ├── sfx
+│   ├── beep.wav
 │   ├── coin.wav
 │   ├── continue.wav
 │   ├── discard.wav
@@ -112,7 +115,8 @@
 │   ├── place.wav
 │   ├── track.mp3
 │   ├── twojokers.wav
-│   └── win.wav
+│   ├── win.wav
+│   └── x.wav
 ├── src
 │   ├── aibots.c
 │   ├── gui.c
@@ -122,7 +126,7 @@
 └── .vscode
     └── settings.json
 
-16 directories, 107 files
+16 directories, 111 files
 
 To run this script, use the following commands:
 chmod +x generate_tree.sh

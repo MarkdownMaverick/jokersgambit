@@ -116,6 +116,15 @@ static void BuildFilename(Card *c)
     }
     sprintf(c->filename, "%s%c.png", rank_str, suit_char);
 }
+bool IsPlayerAI(const GameState *g, int player)
+{
+    int account_idx = (player == 1) ? g->p1_account_index : g->p2_account_index;
+    if (account_idx >= 0 && account_idx < g->account_count)
+    {
+        return g->accounts[account_idx].is_ai;
+    }
+    return false;
+}
 static void LoadCardTexture(Card *c, const char *path)
 {
     if (c->rank != RANK_JOKER || strlen(c->filename) == 0)
@@ -133,7 +142,6 @@ static bool IsRankCompleted(const Card slots[3])
             count++;
     return count == 3;
 }
-
 void CheckRankCompletionBonus(GameState *g, int player, int key_idx, int cards_before)
 {
     Card(*slots)[3] = (player == 1) ? g->p1_slots : g->p2_slots;
@@ -161,7 +169,6 @@ Card DrawFromDeck(GameState *g)
     g->current_deck_size--;
     return c;
 }
-
 void ReturnToDeck(GameState *g, Card c)
 {
     if (!c.is_valid || g->current_deck_size >= TOTAL_DECK_CARDS)
@@ -220,23 +227,18 @@ static void JokersGambit(GameState *g)
     }
     g->p1_hand_size = g->p2_hand_size = HAND_SIZE;
 }
-
 void ResolveDiscards(GameState *g)
 {
     // First, process any pending discards from the PREVIOUS round
     ProcessPendingDiscards(g);
-
     Card d1 = g->revealed_p1;
     Card d2 = g->revealed_p2;
     bool j1 = (d1.rank == RANK_JOKER);
     bool j2 = (d2.rank == RANK_JOKER);
-
     g->p1_balance -= COST_DISCARD;
     g->p2_balance -= COST_DISCARD;
-
     float mult1 = GetRewardMultiplier(g->p1_completed_ranks);
     float mult2 = GetRewardMultiplier(g->p2_completed_ranks);
-
     if (j1 && j2)
     {
         JokersGambit(g);
@@ -244,12 +246,10 @@ void ResolveDiscards(GameState *g)
         g->p2_balance -= JOKER_DISCARD;
         g->p1_balance += (REWARD_DOUBLE_JOKER * mult1);
         g->p2_balance += (REWARD_DOUBLE_JOKER * mult2);
-
         // Store these discards to be returned NEXT round
         g->delay_discard_p1 = d1;
         g->delay_discard_p2 = d2;
         g->discards_pending = true;
-
         PlaySound(g_matching_jokers_sound);
     }
     else if (j1 || j2)
@@ -260,15 +260,12 @@ void ResolveDiscards(GameState *g)
             g->p1_balance -= JOKER_DISCARD;
         if (j2)
             g->p2_balance -= JOKER_DISCARD;
-
         g->player1_hand[g->p1_hand_size++] = DrawFromDeck(g);
         g->player2_hand[g->p2_hand_size++] = DrawFromDeck(g);
-
         // Store these discards to be returned NEXT round
         g->delay_discard_p1 = d1;
         g->delay_discard_p2 = d2;
         g->discards_pending = true;
-
         PlaySound(g_joker_sound);
     }
     else if (d1.rank == d2.rank)
@@ -276,15 +273,12 @@ void ResolveDiscards(GameState *g)
         TriggerSweep(g, 0);
         g->p1_balance += (REWARD_MATCH * mult1);
         g->p2_balance += (REWARD_MATCH * mult2);
-
         g->player1_hand[g->p1_hand_size++] = DrawFromDeck(g);
         g->player2_hand[g->p2_hand_size++] = DrawFromDeck(g);
-
         // Store these discards to be returned NEXT round
         g->delay_discard_p1 = d1;
         g->delay_discard_p2 = d2;
         g->discards_pending = true;
-
         PlaySound(g_matching_cards_sound);
     }
     else
@@ -292,18 +286,15 @@ void ResolveDiscards(GameState *g)
         // Normal discard - no special effect
         g->player1_hand[g->p1_hand_size++] = DrawFromDeck(g);
         g->player2_hand[g->p2_hand_size++] = DrawFromDeck(g);
-
         // Store these discards to be returned NEXT round
         g->delay_discard_p1 = d1;
         g->delay_discard_p2 = d2;
         g->discards_pending = true;
     }
-
     g->p1_done_placing = false;
     g->p2_done_placing = false;
     g->total_rounds++;
 }
-
 void RefreshHands(GameState *g)
 {
     for (int i = 0; i < g->p1_hand_size; i++)
@@ -368,7 +359,6 @@ void AddLeaderboardEntry(GameState *g, int winner)
 }
 void ProcessPendingDiscards(GameState *g)
 {
-    // If there are pending discards from the previous round, return them to deck now
     if (g->discards_pending)
     {
         if (g->delay_discard_p1.is_valid)
@@ -384,7 +374,6 @@ void ProcessPendingDiscards(GameState *g)
         g->discards_pending = false;
     }
 }
-
 void InitGame(GameState *g)
 {
     Account saved_accounts[MAX_ACCOUNTS];
@@ -498,6 +487,8 @@ void InitGame(GameState *g)
     g->p1_done_placing = g->p2_done_placing = false;
     g->game_over = false;
     g->p1_selected = g->p2_selected = false;
+    g->p1_discard_ready = false;
+    g->p2_discard_ready = false;
 }
 void RestartGameKeepingAccounts(GameState *g)
 {
@@ -532,8 +523,7 @@ int main(void)
     g_matching_cards_sound = LoadSound("sfx/matchingcards.wav");
     g_continue_sound = LoadSound("sfx/continue.wav");
     g_coin_sound = LoadSound("sfx/coin.wav");
-    g_beep_sound = LoadSound("sfx/beep.wav"); // <--- NEW: Beep sound effect
-    // 🎵 NEW: Load and start the background music stream
+    g_beep_sound = LoadSound("sfx/beep.wav");              // <--- NEW: Beep sound effect
     g_background_music = LoadMusicStream("sfx/track.mp3"); // <--- REPLACE WITH YOUR PATH
     SetMusicVolume(g_background_music, 0.4f);              // Adjust volume (e.g., 40%)
     PlayMusicStream(g_background_music);                   // Start playing
@@ -555,14 +545,12 @@ int main(void)
     g.account_status_timer = 0.0;
     while (!WindowShouldClose())
     {
-        // 🎵 NEW: Essential call to update the music stream every frame
         UpdateMusicStream(g_background_music);
         Vector2 mouse = GetMousePosition();
         mouse.x = (mouse.x - offset.x) / scale;
         mouse.y = (mouse.y - offset.y) / scale;
         Rectangle menu_btn_rect = {40, 20, 300, 70};
         Rectangle restart_btn_rect = {SCREEN_W - 340, 20, 300, 70};
-        Rectangle skip_btn_rect = {CENTER_X - 150, SCREEN_H - 120, 300, 60};
         bool game_active = (g.state >= STATE_P1_SELECT_DISCARD && g.state <= STATE_CHECK_WIN);
         // Menu/Restart button handling
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
@@ -591,8 +579,7 @@ int main(void)
                 RestartGameKeepingAccounts(&g);
                 g.state = STATE_P1_SELECT_DISCARD;
             }
-            // Leaderboard sort button
-            if (g.state == STATE_LEADERBOARD)
+            if (g.state == STATE_LEADERBOARD) // Leaderboard sort button
             {
                 Rectangle sort_btn = {CENTER_X + 400, 130, 200, 50};
                 if (CheckCollisionPointRec(mouse, sort_btn))
@@ -604,8 +591,7 @@ int main(void)
                     g.state = STATE_MAIN_MENU;
                 }
             }
-            // Game Over screen buttons
-            if (g.state == STATE_GAME_OVER)
+            if (g.state == STATE_GAME_OVER) // Game Over screen buttons
             {
                 Rectangle restart_btn = {CENTER_X - 450, SCREEN_H - 150, 280, 80};
                 Rectangle menu_btn = {CENTER_X - 140, SCREEN_H - 150, 280, 80};
@@ -621,12 +607,11 @@ int main(void)
                 }
                 else if (CheckCollisionPointRec(mouse, quit_btn))
                 {
-                    break; // Exit game loop
+                    break;
                 }
             }
         }
-        // State updates
-        if (g.state == STATE_MAIN_MENU)
+        if (g.state == STATE_MAIN_MENU) // State updates
         {
             UpdateMainMenu(&g, mouse);
         }
@@ -642,10 +627,12 @@ int main(void)
         {
             UpdateAccountCreate(&g);
         }
-        else if (g.state == STATE_REVEAL_AND_RESOLVE && g.p1_selected && g.p2_selected)
+        else if (g.state == STATE_REVEAL_AND_RESOLVE)
         {
             g.revealed_p1 = g.player1_hand[g.p1_discard_idx];
             g.revealed_p2 = g.player2_hand[g.p2_discard_idx];
+            g.p1_discard_ready = false; // CRITICAL: Reset ready flags
+            g.p2_discard_ready = false;
             for (int i = g.p1_discard_idx; i < g.p1_hand_size - 1; i++)
                 g.player1_hand[i] = g.player1_hand[i + 1];
             g.p1_hand_size--;
@@ -653,48 +640,32 @@ int main(void)
                 g.player2_hand[i] = g.player2_hand[i + 1];
             g.p2_hand_size--;
             ResolveDiscards(&g);
-            g.p1_selected = false;
-            g.p2_selected = false;
             g.state = STATE_WAIT_FOR_TURN;
             g.ai_timer = 0;
-            PlaySound(g_reveal_sound); // Added sound for card reveal
+            PlaySound(g_reveal_sound);
         }
         else if (g.state == STATE_HAND_RESHUFFLE)
-{
-    g.placement_phases_count++;
-    if (g.placement_phases_count % 5 == 0)
-    {
-        g.state = STATE_COVER_ANIMATION;
-        g.Reshuffle_cover_timer = 2.0f; // Set for 2 seconds
-        PlaySound(g_beep_sound);
-    }
-    else 
-    {
-        g.revealed_p1 = BlankCard();
-        g.revealed_p2 = BlankCard();
-        g.state = STATE_CHECK_WIN;
-    }
-}
-else if (g.state == STATE_COVER_ANIMATION)
-{
-    g.Reshuffle_cover_timer -= GetFrameTime(); // Count down
-    
-    if (g.Reshuffle_cover_timer <= 0)
-    {
-        RefreshHands(&g);
-        g.revealed_p1 = BlankCard();
-        g.revealed_p2 = BlankCard();
-        g.state = STATE_CHECK_WIN;
-    }
-}
-        // NEW STATE LOGIC:
+        {
+            g.placement_phases_count++;
+            if (g.placement_phases_count % 5 == 0)
+            {
+                g.state = STATE_COVER_ANIMATION;
+                g.Reshuffle_cover_timer = 2.0f;
+                PlaySound(g_beep_sound);
+            }
+            else
+            {
+                g.revealed_p1 = BlankCard();
+                g.revealed_p2 = BlankCard();
+                g.state = STATE_CHECK_WIN;
+            }
+        }
         else if (g.state == STATE_COVER_ANIMATION)
         {
-            g.Reshuffle_cover_timer -= GetFrameTime(); // Decrease timer by delta time
-
+            g.Reshuffle_cover_timer -= GetFrameTime();
             if (g.Reshuffle_cover_timer <= 0)
             {
-                RefreshHands(&g); // Refresh hands AFTER the 2 seconds
+                RefreshHands(&g);
                 g.revealed_p1 = BlankCard();
                 g.revealed_p2 = BlankCard();
                 g.state = STATE_CHECK_WIN;
@@ -732,73 +703,86 @@ else if (g.state == STATE_COVER_ANIMATION)
                 g.state = STATE_P1_SELECT_DISCARD;
             }
         }
-        // Game logic
         if (game_active)
         {
-            if (g.state == STATE_ROUND_START)
+            if (g.state == STATE_P1_SELECT_DISCARD) // DISCARD PHASE - Both players select simultaneously
             {
-                // Show continue buttons for both players
-                // No charges on first round start
-                DrawText("Press CONTINUE to begin round", CENTER_X - 200, 400, 30, GOLD);
-                // Same continue button logic as placement phase but without cost
-                if (g.p1_done_placing)
+                if (IsPlayerAI(&g, 1) && !g.p1_discard_ready)
                 {
-                    g.state = STATE_P1_SELECT_DISCARD;
-                    g.p1_done_placing = false;
-                    // Clear any cards in discard slots
-                    g.revealed_p1 = BlankCard();
+                    AI_SelectDiscard(&g, 1);
+                    g.p1_discard_ready = true;
                 }
-                if (g.p2_done_placing)
+                else if (!IsPlayerAI(&g, 1) && !g.p1_discard_ready) // Human P1 - click handled below
                 {
-                    g.state = STATE_P1_SELECT_DISCARD;
-                    g.p2_done_placing = false;
-                    // Clear any cards in discard slots
-                    g.revealed_p2 = BlankCard();
+                    for (int i = 0; i < g.p1_hand_size; i++)
+                    {
+                        Rectangle btn_rect = ButtonRect(1, i);
+                        if (CheckCollisionPointRec(mouse, btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+                        {
+                            g.p1_discard_idx = i;
+                            g.p1_discard_ready = true;
+                            PlaySound(g_discard_sound);
+                            break;
+                        }
+                    }
+                }
+                if (IsPlayerAI(&g, 2) && !g.p2_discard_ready) // P2 Discard
+                {
+                    AI_SelectDiscard(&g, 2);
+                    g.p2_discard_ready = true;
+                }
+                else if (!IsPlayerAI(&g, 2) && !g.p2_discard_ready)
+                {
+                    // Human P2
+                    for (int i = 0; i < g.p2_hand_size; i++)
+                    {
+                        Rectangle btn_rect = ButtonRect(2, i);
+                        if (CheckCollisionPointRec(mouse, btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+                        {
+                            g.p2_discard_idx = i;
+                            g.p2_discard_ready = true;
+                            PlaySound(g_discard_sound);
+                            break;
+                        }
+                    }
+                }
+                // When both ready, advance to reveal
+                if (g.p1_discard_ready && g.p2_discard_ready)
+                {
+                    g.state = STATE_REVEAL_AND_RESOLVE;
                 }
             }
-            if (g.mode == MODE_AIVSAI && g.state == STATE_P1_SELECT_DISCARD)
-            {
-                AI_SelectDiscard(&g, 1);
-                g.state = STATE_P2_SELECT_DISCARD;
-            }
-            if (g.state == STATE_P2_SELECT_DISCARD && (g.mode == MODE_PVAI || g.mode == MODE_AIVSAI))
-            {
-                AI_SelectDiscard(&g, 2);
-                g.state = STATE_REVEAL_AND_RESOLVE;
-            }
-
+            // ================================================================
+            // PLACEMENT PHASE
+            // ================================================================
             if (g.state == STATE_WAIT_FOR_TURN)
             {
-                if (g.mode == MODE_AIVSAI && !g.p1_done_placing)
+                // AI Placement Updates
+                if (IsPlayerAI(&g, 1) && !g.p1_done_placing)
                 {
                     AI_UpdatePlacementPhase(&g, 1);
                 }
-                if ((g.mode == MODE_PVAI || g.mode == MODE_AIVSAI) && !g.p2_done_placing)
+                if (IsPlayerAI(&g, 2) && !g.p2_done_placing)
                 {
-                    if (g.mode == MODE_PVAI || g.p1_ai_done_placing_rounds)
+                    // For AIVSAI, wait for P1 to finish
+                    if (!IsPlayerAI(&g, 1) || g.p1_ai_done_placing_rounds)
                     {
                         AI_UpdatePlacementPhase(&g, 2);
                     }
                 }
+                // Check if both done
                 if (g.p1_done_placing && g.p2_done_placing)
                 {
                     g.state = STATE_HAND_RESHUFFLE;
                     g.p1_ai_done_placing_rounds = false;
                 }
-            }
-
-            bool skip_placement_pressed = IsKeyPressed(KEY_SPACE);
-            if (CheckCollisionPointRec(mouse, skip_btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
-            {
-                skip_placement_pressed = true;
-            }
-            if (g.state == STATE_WAIT_FOR_TURN)
-            {
+                // Human Placement & Continue Buttons
                 float mult1 = GetRewardMultiplier(g.p1_completed_ranks);
                 float mult2 = GetRewardMultiplier(g.p2_completed_ranks);
                 float reward1 = REWARD_PLACEMENT * mult1;
                 float reward2 = REWARD_PLACEMENT * mult2;
-                if (g.mode != MODE_AIVSAI && !g.p1_done_placing)
+                // P1 Human Card Placement
+                if (!IsPlayerAI(&g, 1) && !g.p1_done_placing)
                 {
                     for (int i = 0; i < g.p1_hand_size; i++)
                     {
@@ -808,7 +792,6 @@ else if (g.state == STATE_COVER_ANIMATION)
                             Card c = g.player1_hand[i];
                             if (c.suit != SUIT_HEARTS && c.rank != RANK_JOKER)
                             {
-                                bool placed = false;
                                 for (int k = 0; k < KEYCARDS; k++)
                                 {
                                     if (c.rank == g.keycards[k].rank)
@@ -830,24 +813,19 @@ else if (g.state == STATE_COVER_ANIMATION)
                                                         g.player1_hand[j] = g.player1_hand[j + 1];
                                                     g.p1_hand_size--;
                                                     g.player1_hand[g.p1_hand_size++] = DrawFromDeck(&g);
-                                                    placed = true;
-                                                    PlaySound(g_place_sound); // Sound for card placement
+                                                    PlaySound(g_place_sound);
                                                     break;
                                                 }
                                             }
                                         }
-                                        if (placed)
-                                            break;
+                                        break;
                                     }
                                 }
                             }
                         }
                     }
-                    if (skip_placement_pressed)
-                        g.p1_done_placing = true;
-                    PlaySound(g_coin_sound);
                 }
-                if (g.mode == MODE_PVP && !g.p2_done_placing)
+                if (!IsPlayerAI(&g, 2) && !g.p2_done_placing) // P2 Human Card Placement
                 {
                     for (int i = 0; i < g.p2_hand_size; i++)
                     {
@@ -857,7 +835,6 @@ else if (g.state == STATE_COVER_ANIMATION)
                             Card c = g.player2_hand[i];
                             if (c.suit != SUIT_HEARTS && c.rank != RANK_JOKER)
                             {
-                                bool placed = false;
                                 for (int k = 0; k < KEYCARDS; k++)
                                 {
                                     if (c.rank == g.keycards[k].rank)
@@ -879,53 +856,49 @@ else if (g.state == STATE_COVER_ANIMATION)
                                                         g.player2_hand[j] = g.player2_hand[j + 1];
                                                     g.p2_hand_size--;
                                                     g.player2_hand[g.p2_hand_size++] = DrawFromDeck(&g);
-                                                    placed = true;
-                                                    PlaySound(g_place_sound); // Sound for card placement
+                                                    PlaySound(g_place_sound);
                                                     break;
                                                 }
                                             }
                                         }
-                                        if (placed)
-                                            break;
+                                        break;
                                     }
                                 }
                             }
                         }
                     }
-                    if (skip_placement_pressed)
-                        g.p2_done_placing = true;
+                }
+                bool p1_continue = IsKeyPressed(KEY_ONE) || IsKeyPressed(KEY_KP_1);
+                bool p2_continue = IsKeyPressed(KEY_TWO) || IsKeyPressed(KEY_KP_2);
+                // P1 Continue Button Click
+                if (!IsPlayerAI(&g, 1) && !g.p1_done_placing)
+                {
+                    Rectangle btn = ContinueButtonRect(1);
+                    if (CheckCollisionPointRec(mouse, btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+                        p1_continue = true;
+                }
+                // P2 Continue Button Click
+                if (!IsPlayerAI(&g, 2) && !g.p2_done_placing)
+                {
+                    Rectangle btn = ContinueButtonRect(2);
+                    if (CheckCollisionPointRec(mouse, btn) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+                        p2_continue = true;
+                }
+                // Apply Continue Actions
+                if (p1_continue && !g.p1_done_placing && !IsPlayerAI(&g, 1))
+                {
+                    g.p1_done_placing = true;
+                    g.p1_balance -= 1.00f;
+                    PlaySound(g_coin_sound);
+                }
+                if (p2_continue && !g.p2_done_placing && !IsPlayerAI(&g, 2))
+                {
+                    g.p2_done_placing = true;
+                    g.p2_balance -= 1.00f;
                     PlaySound(g_coin_sound);
                 }
             }
-            // Human discard selection
-            if ((g.state == STATE_P1_SELECT_DISCARD && g.mode != MODE_AIVSAI) ||
-                (g.state == STATE_P2_SELECT_DISCARD && g.mode == MODE_PVP))
-            {
-                int player = (g.state == STATE_P1_SELECT_DISCARD) ? 1 : 2;
-                int hand_size = (player == 1) ? g.p1_hand_size : g.p2_hand_size;
-                bool *selected_ptr = (player == 1) ? &g.p1_selected : &g.p2_selected;
-                int *idx_ptr = (player == 1) ? &g.p1_discard_idx : &g.p2_discard_idx;
-                if (!*selected_ptr)
-                {
-                    for (int i = 0; i < hand_size; i++)
-                    {
-                        Rectangle btn_rect = ButtonRect(player, i);
-                        if (CheckCollisionPointRec(mouse, btn_rect) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
-                        {
-                            *idx_ptr = i;
-                            *selected_ptr = true;
-                            PlaySound(g_discard_sound); // Sound for selecting a discard card
-                            if (g.state == STATE_P1_SELECT_DISCARD)
-                                g.state = STATE_P2_SELECT_DISCARD;
-                            else if (g.state == STATE_P2_SELECT_DISCARD)
-                                g.state = STATE_REVEAL_AND_RESOLVE;
-                            break;
-                        }
-                    }
-                }
-            }
         }
-        // Drawing
         BeginDrawing();
         ClearBackground(BLACK); // Black letterbox
         BeginMode2D((Camera2D){
@@ -965,58 +938,42 @@ else if (g.state == STATE_COVER_ANIMATION)
         {
             DrawGameLayout(&g);
             if (g.state == STATE_COVER_ANIMATION)
-{  // needs work 
-    int screenW = GetScreenWidth();  // needs work 
-    int cardWidth = 100;  // needs work 
-    int cardHeight = 140;  // needs work 
-    int spacing = 10;  // needs work 
-  // needs work 
-    // --- Cover Player 1 Cards (Bottom) ---  // needs work 
-    float p1_totalWidth = g.p1_hand_size * cardWidth + (g.p1_hand_size - 1) * spacing;  // needs work 
-    float p1_startX = (screenW - p1_totalWidth) / 2;  // needs work 
-  // needs work 
-    for (int i = 0; i < g.p1_hand_size; i++)  // needs work 
-    {  // needs work 
-        Rectangle r = { p1_startX + i * (cardWidth + spacing), 550, (float)cardWidth, (float)cardHeight };  // needs work 
-        DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},   // needs work 
-                       r, (Vector2){0, 0}, 0, WHITE);  // needs work 
-    }  // needs work 
-  // needs work 
-    // --- Cover Player 2/AI Cards (Top) ---  // needs work 
-    float p2_totalWidth = g.p2_hand_size * cardWidth + (g.p2_hand_size - 1) * spacing;  // needs work 
-    float p2_startX = (screenW - p2_totalWidth) / 2;  // needs work 
-  // needs work 
-    for (int i = 0; i < g.p2_hand_size; i++)  // needs work 
-    {  // needs work 
-        Rectangle r = { p2_startX + i * (cardWidth + spacing), 50, (float)cardWidth, (float)cardHeight };  // needs work 
-        DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},   // needs work 
-                       r, (Vector2){0, 0}, 0, WHITE);  // needs work 
-    }  // needs work 
-}  // needs work 
-            if (g.state == STATE_WAIT_FOR_TURN && g.mode != MODE_AIVSAI)
             {
-                bool skip_hover = CheckCollisionPointRec(mouse, skip_btn_rect);
-                DrawRectangleRec(skip_btn_rect, skip_hover ? GOLD : ORANGE);
-                DrawText("CONTINUE", (int)skip_btn_rect.x + 15, (int)skip_btn_rect.y + 20, 25, BLACK);
+                int screenW = GetScreenWidth();
+                int cardWidth = 100;
+                int cardHeight = 140;
+                int spacing = 10;
+                // --- Cover Player 1 Cards (Bottom) ---
+                float p1_totalWidth = g.p1_hand_size * cardWidth + (g.p1_hand_size - 1) * spacing;
+                float p1_startX = (screenW - p1_totalWidth) / 2;
+
+                for (int i = 0; i < g.p1_hand_size; i++)
+                {
+                    Rectangle r = {p1_startX + i * (cardWidth + spacing), 550, (float)cardWidth, (float)cardHeight};
+                    DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},
+                                   r, (Vector2){0, 0}, 0, WHITE);
+                }
+
+                float p2_totalWidth = g.p2_hand_size * cardWidth + (g.p2_hand_size - 1) * spacing;
+                float p2_startX = (screenW - p2_totalWidth) / 2;
+
+                for (int i = 0; i < g.p2_hand_size; i++)
+                {
+                    Rectangle r = {p2_startX + i * (cardWidth + spacing), 50, (float)cardWidth, (float)cardHeight};
+                    DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},
+                                   r, (Vector2){0, 0}, 0, WHITE);
+                }
             }
-            bool menu_hover = CheckCollisionPointRec(mouse, menu_btn_rect);
-            bool restart_hover = CheckCollisionPointRec(mouse, restart_btn_rect);
-            DrawRectangleRec(menu_btn_rect, menu_hover ? LIME : DARKGREEN);
-            DrawRectangleRec(restart_btn_rect, restart_hover ? SKYBLUE : BLUE);
-            DrawText("MAIN MENU", (int)menu_btn_rect.x + 40, (int)menu_btn_rect.y + 20, 30, WHITE);
-            DrawText("RESTART", (int)restart_btn_rect.x + 60, (int)restart_btn_rect.y + 20, 30, WHITE);
         }
         EndMode2D();
         EndDrawing();
         UpdateScale();
     }
-    // Unload resources
     UnloadTexture(g_card_back_texture);
     UnloadTexture(g_background_texture);
     UnloadTexture(g_ui_frame_texture);
     UnloadTexture(g_button_texture);
     UnloadTexture(g_temp_cover_texture);
-
     UnloadSound(g_discard_sound);
     UnloadSound(g_filled_rank_sound);
     UnloadSound(g_win_sound);
@@ -1028,9 +985,7 @@ else if (g.state == STATE_COVER_ANIMATION)
     UnloadSound(g_continue_sound);
     UnloadSound(g_coin_sound);
     UnloadSound(g_beep_sound);
-
     UnloadMusicStream(g_background_music);
-
     CloseAudioDevice();
     CloseWindow();
     return 0;

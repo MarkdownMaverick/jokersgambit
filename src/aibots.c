@@ -68,7 +68,7 @@ void AI_SelectDiscard(GameState *g, int player)
 
     int account_idx = (player == 1) ? g->p1_account_index : g->p2_account_index;
 
-    AIType ai_type = AI_BOB;
+    AIType ai_type = g->selected_opponent_ai;
 
     if (account_idx >= 0 && account_idx < g->account_count)
     {
