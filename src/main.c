@@ -131,6 +131,7 @@ static bool IsRankCompleted(const Card slots[3])
             count++;
     return count == 3;
 }
+
 void CheckRankCompletionBonus(GameState *g, int player, int key_idx, int cards_before)
 {
     Card(*slots)[3] = (player == 1) ? g->p1_slots : g->p2_slots;
@@ -158,6 +159,7 @@ Card DrawFromDeck(GameState *g)
     g->current_deck_size--;
     return c;
 }
+
 void ReturnToDeck(GameState *g, Card c)
 {
     if (!c.is_valid || g->current_deck_size >= TOTAL_DECK_CARDS)
@@ -216,63 +218,90 @@ static void JokersGambit(GameState *g)
     }
     g->p1_hand_size = g->p2_hand_size = HAND_SIZE;
 }
+
 void ResolveDiscards(GameState *g)
 {
+    // First, process any pending discards from the PREVIOUS round
+    ProcessPendingDiscards(g);
+    
     Card d1 = g->revealed_p1;
     Card d2 = g->revealed_p2;
     bool j1 = (d1.rank == RANK_JOKER);
     bool j2 = (d2.rank == RANK_JOKER);
+    
     g->p1_balance -= COST_DISCARD;
     g->p2_balance -= COST_DISCARD;
+    
     float mult1 = GetRewardMultiplier(g->p1_completed_ranks);
     float mult2 = GetRewardMultiplier(g->p2_completed_ranks);
+    
     if (j1 && j2)
     {
         JokersGambit(g);
-        g->p1_balance -= PENALTY_JOKER;
-        g->p2_balance -= PENALTY_JOKER;
+        g->p1_balance -= JOKER_DISCARD;
+        g->p2_balance -= JOKER_DISCARD;
         g->p1_balance += (REWARD_DOUBLE_JOKER * mult1);
         g->p2_balance += (REWARD_DOUBLE_JOKER * mult2);
-        ReturnToDeck(g, d1);
-        ReturnToDeck(g, d2);
-        PlaySound(g_matching_jokers_sound); // Added sound
+        
+        // Store these discards to be returned NEXT round
+        g->delay_discard_p1 = d1;
+        g->delay_discard_p2 = d2;
+        g->discards_pending = true;
+        
+        PlaySound(g_matching_jokers_sound);
     }
     else if (j1 || j2)
     {
         int opp = j1 ? 2 : 1;
         TriggerSweep(g, opp);
         if (j1)
-            g->p1_balance -= PENALTY_JOKER;
+            g->p1_balance -= JOKER_DISCARD;
         if (j2)
-            g->p2_balance -= PENALTY_JOKER;
+            g->p2_balance -= JOKER_DISCARD;
+        
         g->player1_hand[g->p1_hand_size++] = DrawFromDeck(g);
         g->player2_hand[g->p2_hand_size++] = DrawFromDeck(g);
-        ReturnToDeck(g, d1);
-        ReturnToDeck(g, d2);
-        PlaySound(g_joker_sound); // Added sound
+        
+        // Store these discards to be returned NEXT round
+        g->delay_discard_p1 = d1;
+        g->delay_discard_p2 = d2;
+        g->discards_pending = true;
+        
+        PlaySound(g_joker_sound);
     }
     else if (d1.rank == d2.rank)
     {
         TriggerSweep(g, 0);
         g->p1_balance += (REWARD_MATCH * mult1);
         g->p2_balance += (REWARD_MATCH * mult2);
+        
         g->player1_hand[g->p1_hand_size++] = DrawFromDeck(g);
         g->player2_hand[g->p2_hand_size++] = DrawFromDeck(g);
-        ReturnToDeck(g, d1);
-        ReturnToDeck(g, d2);
-        PlaySound(g_matching_cards_sound); // Added sound
+        
+        // Store these discards to be returned NEXT round
+        g->delay_discard_p1 = d1;
+        g->delay_discard_p2 = d2;
+        g->discards_pending = true;
+        
+        PlaySound(g_matching_cards_sound);
     }
     else
     {
+        // Normal discard - no special effect
         g->player1_hand[g->p1_hand_size++] = DrawFromDeck(g);
         g->player2_hand[g->p2_hand_size++] = DrawFromDeck(g);
-        ReturnToDeck(g, d1);
-        ReturnToDeck(g, d2);
+        
+        // Store these discards to be returned NEXT round
+        g->delay_discard_p1 = d1;
+        g->delay_discard_p2 = d2;
+        g->discards_pending = true;
     }
+    
     g->p1_done_placing = false;
     g->p2_done_placing = false;
     g->total_rounds++;
 }
+
 void RefreshHands(GameState *g)
 {
     for (int i = 0; i < g->p1_hand_size; i++)
@@ -335,6 +364,25 @@ void AddLeaderboardEntry(GameState *g, int winner)
     g->leaderboard_count++;
     SaveLeaderboard(g);
 }
+void ProcessPendingDiscards(GameState *g)
+{
+    // If there are pending discards from the previous round, return them to deck now
+    if (g->discards_pending)
+    {
+        if (g->delay_discard_p1.is_valid)
+        {
+            ReturnToDeck(g, g->delay_discard_p1);
+            g->delay_discard_p1 = BlankCard();
+        }
+        if (g->delay_discard_p2.is_valid)
+        {
+            ReturnToDeck(g, g->delay_discard_p2);
+            g->delay_discard_p2 = BlankCard();
+        }
+        g->discards_pending = false;
+    }
+}
+
 void InitGame(GameState *g)
 {
     Account saved_accounts[MAX_ACCOUNTS];
@@ -437,6 +485,9 @@ void InitGame(GameState *g)
     {
         g->p2_balance = 10.0f;
     }
+    g->delay_discard_p1 = BlankCard();
+    g->delay_discard_p2 = BlankCard();
+    g->discards_pending = false;
     g->state = STATE_ROUND_START;
     g->state = STATE_P1_SELECT_DISCARD;
     g->p1_completed_ranks = g->p2_completed_ranks = 0;
