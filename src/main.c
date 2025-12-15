@@ -937,31 +937,85 @@ int main(void)
         else
         {
             DrawGameLayout(&g);
+            // Draw Main Menu Button (Top Left)
+            bool menu_hover = CheckCollisionPointRec(mouse, menu_btn_rect);
+            if (g_button_texture.id != 0)
+            {
+                DrawTexturePro(g_button_texture, (Rectangle){0, 0, (float)g_button_texture.width, (float)g_button_texture.height},
+                               menu_btn_rect, (Vector2){0, 0}, 0, menu_hover ? GOLD : WHITE);
+            }
+            else
+            {
+                DrawRectangleRec(menu_btn_rect, menu_hover ? GOLD : GRAY);
+            }
+            DrawText("MAIN MENU", menu_btn_rect.x + 60, menu_btn_rect.y + 20, 30, BLACK);
+
+            // Draw Restart Button (Top Right)
+            bool restart_hover = CheckCollisionPointRec(mouse, restart_btn_rect);
+            if (g_button_texture.id != 0)
+            {
+                DrawTexturePro(g_button_texture, (Rectangle){0, 0, (float)g_button_texture.width, (float)g_button_texture.height},
+                               restart_btn_rect, (Vector2){0, 0}, 0, restart_hover ? GOLD : WHITE);
+            }
+            else
+            {
+                DrawRectangleRec(restart_btn_rect, restart_hover ? GOLD : GRAY);
+            }
+            DrawText("RESTART", restart_btn_rect.x + 85, restart_btn_rect.y + 20, 30, BLACK);
+            // --- END TOP BUTTONS ---
+            // Check if game is currently in an active state or game over for shortcuts
+            bool game_active_or_over = (g.state >= STATE_P1_SELECT_DISCARD && g.state <= STATE_CHECK_WIN) || (g.state == STATE_GAME_OVER);
+
+            // Shortcut for Main Menu (Comma key)
+            if (IsKeyPressed(KEY_COMMA))
+            {
+                if (g.state >= STATE_P1_SELECT_DISCARD && g.state <= STATE_CHECK_WIN)
+                {
+                    // Save balances before leaving active game
+                    if (g.p1_account_index != -1)
+                        g.accounts[g.p1_account_index].balance = (double)g.p1_balance;
+                    if (g.p2_account_index != -1)
+                        g.accounts[g.p2_account_index].balance = (double)g.p2_balance;
+                    SaveAllAccounts(&g);
+                }
+                g.state = STATE_MAIN_MENU;
+            }
+
+            // Shortcut for Restart (Period key)
+            if (IsKeyPressed(KEY_PERIOD) && game_active_or_over)
+            {
+                // Save current balances
+                if (g.p1_account_index != -1)
+                    g.accounts[g.p1_account_index].balance = (double)g.p1_balance;
+                if (g.p2_account_index != -1)
+                    g.accounts[g.p2_account_index].balance = (double)g.p2_balance;
+                SaveAllAccounts(&g);
+
+                // Trigger game restart
+                RestartGameKeepingAccounts(&g);
+                g.state = STATE_P1_SELECT_DISCARD;
+            }
             if (g.state == STATE_COVER_ANIMATION)
             {
-                int screenW = GetScreenWidth();
-                int cardWidth = 100;
-                int cardHeight = 140;
-                int spacing = 10;
-                // --- Cover Player 1 Cards (Bottom) ---
-                float p1_totalWidth = g.p1_hand_size * cardWidth + (g.p1_hand_size - 1) * spacing;
-                float p1_startX = (screenW - p1_totalWidth) / 2;
 
                 for (int i = 0; i < g.p1_hand_size; i++)
                 {
-                    Rectangle r = {p1_startX + i * (cardWidth + spacing), 550, (float)cardWidth, (float)cardHeight};
-                    DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},
-                                   r, (Vector2){0, 0}, 0, WHITE);
+                    Rectangle r = HandRect(1, i); // This function uses your gui.c positions
+                    if (g_temp_cover_texture.id != 0)
+                    {
+                        DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},
+                                       r, (Vector2){0, 0}, 0, WHITE);
+                    }
                 }
-
-                float p2_totalWidth = g.p2_hand_size * cardWidth + (g.p2_hand_size - 1) * spacing;
-                float p2_startX = (screenW - p2_totalWidth) / 2;
 
                 for (int i = 0; i < g.p2_hand_size; i++)
                 {
-                    Rectangle r = {p2_startX + i * (cardWidth + spacing), 50, (float)cardWidth, (float)cardHeight};
-                    DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},
-                                   r, (Vector2){0, 0}, 0, WHITE);
+                    Rectangle r = HandRect(2, i);
+                    if (g_temp_cover_texture.id != 0)
+                    {
+                        DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},
+                                       r, (Vector2){0, 0}, 0, WHITE);
+                    }
                 }
             }
         }

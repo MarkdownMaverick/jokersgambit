@@ -269,37 +269,53 @@ void DrawGameOver(GameState *g)
 }
 Rectangle ContinueButtonRect(int player)
 {
-    float y = SCREEN_H - 200;
-    float x = (player == 1) ? 200 : SCREEN_W - 400;
-    return (Rectangle){x, y, 200, 60};
+    // Get the reference button position (using index 4 for P1 end, index 0 for P2 start)
+    // We adjust the X offset so they sit "outside" the hand range
+    Rectangle ref_rect;
+    float x;
+
+    if (player == 1) {
+        ref_rect = ButtonRect(1, 4); 
+        x = ref_rect.x + ref_rect.width + 10; // 10px after the last P1 button
+    } else {
+        ref_rect = ButtonRect(2, 0);
+        x = ref_rect.x - 80 - 10; // 80px width + 10px gap before the first P2 button
+    }
+
+    return (Rectangle){ x, ref_rect.y, 80, ref_rect.height };
 }
 void DrawContinueButtons(const GameState *g, Vector2 mouse)
 {
     if (g->state != STATE_WAIT_FOR_TURN)
         return;
 
-    // P1 Continue Button - show if P1 is human and not done
-    if (!g->p1_done_placing && !IsPlayerAI(g, 1))
+    for (int p = 1; p <= 2; p++)
     {
-        Rectangle btn = ContinueButtonRect(1);
-        bool hover = CheckCollisionPointRec(mouse, btn);
-        DrawRectangleRec(btn, hover ? GOLD : ORANGE);
-        DrawRectangleLinesEx(btn, 3, BLACK);
+        // Check if player is human and not finished
+        bool is_human_active = (p == 1) ? (!g->p1_done_placing && !IsPlayerAI(g, 1)) 
+                                        : (!g->p2_done_placing && !IsPlayerAI(g, 2));
 
-        int text_w = MeasureText("CONTINUE (1)", 20);
-        DrawText("CONTINUE (1)", btn.x + (btn.width - text_w) / 2, btn.y + 20, 20, BLACK);
-    }
+        if (is_human_active)
+        {
+            Rectangle btn = ContinueButtonRect(p);
+            bool hover = CheckCollisionPointRec(mouse, btn);
+            Color tint = hover ? Fade(RAYWHITE, 0.7f) : RAYWHITE;
 
-    // P2 Continue Button - show if P2 is human and not done
-    if (!g->p2_done_placing && !IsPlayerAI(g, 2))
-    {
-        Rectangle btn = ContinueButtonRect(2);
-        bool hover = CheckCollisionPointRec(mouse, btn);
-        DrawRectangleRec(btn, hover ? GOLD : ORANGE);
-        DrawRectangleLinesEx(btn, 3, BLACK);
+            // Draw the texture (btn.png)
+            if (g_button_texture.id != 0)
+            {
+                DrawTexturePro(g_button_texture, 
+                               (Rectangle){0, 0, (float)g_button_texture.width, (float)g_button_texture.height},
+                               btn, (Vector2){0, 0}, 0.0f, tint);
+            }
+            else
+            {
+                DrawRectangleRec(btn, hover ? GOLD : ORANGE); // Fallback
+            }
 
-        int text_w = MeasureText("CONTINUE (2)", 20);
-        DrawText("CONTINUE (2)", btn.x + (btn.width - text_w) / 2, btn.y + 20, 20, BLACK);
+            int text_w = MeasureText("PASS", 20);
+            DrawText("PASS", btn.x + (btn.width - text_w) / 2, btn.y + (btn.height / 2 - 10), 20, BLACK);
+        }
     }
 }
 void DrawPlayerUI(const GameState *g, int player)
