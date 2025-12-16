@@ -114,14 +114,16 @@ void AI_UpdatePlacementPhase(GameState *g, int player)
 
     if (*done_placing)
         return;
-    if (g->mode == MODE_AIVSAI && player == 2 && !g->p1_ai_done_placing_rounds)
-        return;
+    
+    // We repurpose 'Reshuffle_cover_timer' for P2 so both can move simultaneously 
+    // without interfering with each other's timers.
+    float *timer = (player == 1) ? &g->ai_timer : &g->Reshuffle_cover_timer;
 
-    g->ai_timer += GetFrameTime();
+    *timer += GetFrameTime();
 
-    if (g->ai_timer > AI_MOVE_DELAY)
+    if (*timer > AI_MOVE_DELAY)
     {
-        g->ai_timer = 0;
+        *timer = 0;
         float mult = GetRewardMultiplier(*ranks_complete);
         float placement_reward = REWARD_PLACEMENT * mult;
 

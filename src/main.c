@@ -642,6 +642,7 @@ int main(void)
             ResolveDiscards(&g);
             g.state = STATE_WAIT_FOR_TURN;
             g.ai_timer = 0;
+            g.Reshuffle_cover_timer = 0; // RESET P2 AI TIMER HERE FOR SIMULTANEOUS MOVES
             PlaySound(g_reveal_sound);
         }
         else if (g.state == STATE_HAND_RESHUFFLE)
@@ -764,11 +765,8 @@ int main(void)
                 }
                 if (IsPlayerAI(&g, 2) && !g.p2_done_placing)
                 {
-                    // For AIVSAI, wait for P1 to finish
-                    if (!IsPlayerAI(&g, 1) || g.p1_ai_done_placing_rounds)
-                    {
-                        AI_UpdatePlacementPhase(&g, 2);
-                    }
+                    // For AIVSAI, allow independent updating
+                    AI_UpdatePlacementPhase(&g, 2);
                 }
                 // Check if both done
                 if (g.p1_done_placing && g.p2_done_placing)
@@ -1000,7 +998,7 @@ int main(void)
 
                 for (int i = 0; i < g.p1_hand_size; i++)
                 {
-                    Rectangle r = HandRect(1, i); // This function uses your gui.c positions
+                    Rectangle r = HandRect(1, i); // This function uses gui.c positions
                     if (g_temp_cover_texture.id != 0)
                     {
                         DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},

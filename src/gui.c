@@ -218,7 +218,7 @@ void DrawGameOver(GameState *g)
              SCREEN_H / 2, 35, GREEN);
     const char *loser_name = (g->winner == 1) ? GetPlayerName(g, 2) : GetPlayerName(g, 1);
     float loser_score = (g->winner == 1) ? g->final_score_p2 : g->final_score_p1;
-    float loser_penalty = -10.0f * g->total_rounds;
+    float loser_penalty = -1.0f * g->total_rounds;
     DrawText(TextFormat("%s: $%.2f (Penalty: $%.2f)", loser_name, loser_score, loser_penalty),
              (SCREEN_W - MeasureText(TextFormat("PlayerName: $9999.99 (Penalty: $-999.99)"), 30)) / 2,
              SCREEN_H / 2 + 60, 30, ORANGE);
