@@ -65,22 +65,11 @@
 - **Discard Phase (PvP):** Both players discard 1 card in any order. Game proceeds to REVEAL phase when both complete. Cards held until next discard phase, then returned to random deck position.
 - **Continue Buttons:** Keyboard mapping P1 = `1` key, P2 = `2` key. Press once when done → wait for other player/AI.
 - **Return to menu & restart buttons** Added keybinds for restart = `.`   return to menu = `,`
-
+- **AI vs AI Placement Phase** Ai now place cards at the same time during placement phase
 ---
 
 # Issues I'm Working On
 
-
-### High Priority
-
-#### AI vs AI Placement Phase
-P2 AI waits for P1 AI to place first instead of placing simultaneously. Both AIs should:
-- Place cards at the same time during placement phase
-- Press "Continue" once when done (no rank cards left to place)
-- Wait for or join the other AI before proceeding
-
-
----
 
 ### Low Priority - Keyboard Navigation System
 
@@ -127,6 +116,7 @@ P2 AI waits for P1 AI to place first instead of placing simultaneously. Both AIs
 
 
 ## Testing Status
-- Fixes applied to most issues .v4.51 Testing in progress.
+- Fixes applied to most issues .
+v4.52 Testing in progress...
 
 ```
