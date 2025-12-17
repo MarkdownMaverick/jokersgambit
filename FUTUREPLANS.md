@@ -2,6 +2,39 @@
 ***
 
 ### Future Plans
+### Low Priority - Keyboard Navigation System
+
+#### Main Menu Navigation
+- **Arrow keys:** Navigate up/down through buttons (PLAY, ACCOUNTS, SETTINGS, LEADERBOARD)
+- **Visual feedback:** Glowing edge around active/highlighted button
+- **Selection:** Press `0` to activate highlighted button
+- **Mouse support:** Existing click navigation continues working
+
+#### Accounts Screen Navigation
+- **Horizontal navigation:** 
+  - Arrow right → LOGIN P2 → Arrow right → DELETE
+- **Vertical navigation:** 
+  - Arrow down from P1 → P2 slot in account below
+- **Seamless 2D navigation:** 
+  - Example: P1 highlighted → Right + Down = P2 slot in account below
+- **Selection:** Press `0` to select highlighted account
+- **Bottom buttons:** Arrow navigation highlights CREATE NEW or BACK buttons, press `0` to use
+- **Mouse support:** Existing click navigation continues working
+
+#### Leaderboard Navigation
+- **Vertical scroll:** Up/Down arrows to scroll leaderboard
+- **Sorting:** Left/Right arrows to toggle between:
+  - Lowest rounds first
+  - Highest cash total first
+- **Return to menu:** New button with `,` keybind to return to main menu
+- **Mouse support:** Existing click navigation continues working
+
+#### Local PvP Navigation
+- **Shared keyboard:** Highlighted buttons must navigate both players' hands and buttons (single keyboard setup)
+- **Selection:** Press `0` to select highlighted discard or place buttons
+- **Mouse support:** Existing click navigation continues working
+
+---
 
 #### Settings enhancements
 - Adjustable AI decision speed (slow, medium, fast), unlocked via the shop or tied to account type (Basic: slow, Premium: medium, HighRoller: fast).  

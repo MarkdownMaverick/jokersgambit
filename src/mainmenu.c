@@ -1,7 +1,7 @@
 #include "mainmenu.h"
 #include "useraccount.h"
 #include "gui.h"
-
+#include <main.h>
 char new_first_name[MAX_ACCOUNT_NAME_LEN + 1] = {0};
 char new_last_name[MAX_ACCOUNT_NAME_LEN + 1] = {0};
 int current_name_field = 1;
@@ -132,14 +132,18 @@ void DrawSettings(GameState *g)
     DrawRectangleRec(back_rect, back_hover ? RED : MAROON);
     DrawText("BACK", back_rect.x + 100, back_rect.y + 25, 35, WHITE);
 
-    // New setting for the speed of the AI,  AI_MOVE_DELAY . (fastest 1.0f) (medium 2.0f) (slowest 3.0f)
-    DrawText("AI Move Speed:", CENTER_X - 300, 580, 40, GREEN);
+    // New setting for the speed of the AI,AI_MOVE_DELAY 2.0f. (fastest 1.0f) (medium 2.0f) (slowest 3.0f) new code 
+    Rectangle ai_speed_rect = {CENTER_X - 150, 650, 300, 60};
+    bool ai_speed_hover = CheckCollisionPointRec(mouse, ai_speed_rect);
+    DrawRectangleRec(ai_speed_rect, ai_speed_hover ? ORANGE : GOLD);
+    DrawText("AI Move Speed:", ai_speed_rect.x + 10, ai_speed_rect.y + 25, 25, WHITE);
 }
 
 void UpdateSettings(GameState *g, Vector2 mouse)
 {
     Rectangle cover_btn_rect = {CENTER_X - 150, 380, 300, 80};
     Rectangle back_rect = {CENTER_X - 150, SCREEN_H - 180, 300, 80};
+    Rectangle ai_speed_rect = {CENTER_X - 150, 650, 300, 60};
 
     if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
     {
@@ -150,6 +154,9 @@ void UpdateSettings(GameState *g, Vector2 mouse)
         else if (CheckCollisionPointRec(mouse, back_rect))
         {
             g->state = STATE_MAIN_MENU;
+        }
+        else if (CheckCollisionPointRec(mouse, ai_speed_rect))
+        {
         }
     }
 }

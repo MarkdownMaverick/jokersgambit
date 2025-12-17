@@ -173,9 +173,11 @@ void ReturnToDeck(GameState *g, Card c)
 {
     if (!c.is_valid || g->current_deck_size >= TOTAL_DECK_CARDS)
         return;
-    g->deck[++g->top_card_index] = c;
+    g->top_card_index++;     // 1. Place the card at the current top of the deck
+    g->deck[g->top_card_index] = c;
     g->current_deck_size++;
-    if (g->top_card_index > 0 && rand() % 5 == 0) // 25% chance to shuffle
+    // ALWAYS shuffle the returned card into a random position instead of only a 20% chance. 
+    if (g->top_card_index > 0) 
     {
         int r = rand() % (g->top_card_index + 1);
         Card t = g->deck[g->top_card_index];
@@ -361,15 +363,25 @@ void ProcessPendingDiscards(GameState *g)
 {
     if (g->discards_pending)
     {
-        if (g->delay_discard_p1.is_valid)
-        {
-            ReturnToDeck(g, g->delay_discard_p1);
-            g->delay_discard_p1 = BlankCard();
-        }
-        if (g->delay_discard_p2.is_valid)
-        {
-            ReturnToDeck(g, g->delay_discard_p2);
-            g->delay_discard_p2 = BlankCard();
+        // This is to prevent predictable deck ordering
+        if (rand() % 2 == 0) {
+            if (g->delay_discard_p1.is_valid) {
+                ReturnToDeck(g, g->delay_discard_p1);
+                g->delay_discard_p1 = BlankCard();
+            }
+            if (g->delay_discard_p2.is_valid) {
+                ReturnToDeck(g, g->delay_discard_p2);
+                g->delay_discard_p2 = BlankCard();
+            }
+        } else {
+            if (g->delay_discard_p2.is_valid) {
+                ReturnToDeck(g, g->delay_discard_p2);
+                g->delay_discard_p2 = BlankCard();
+            }
+            if (g->delay_discard_p1.is_valid) {
+                ReturnToDeck(g, g->delay_discard_p1);
+                g->delay_discard_p1 = BlankCard();
+            }
         }
         g->discards_pending = false;
     }

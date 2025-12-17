@@ -1,5 +1,5 @@
 
-# Joker's Gambit v4.51
+# Joker's Gambit v4.52
 <p align="center">
 <img src="screenshot1.png" alt="Game Interface" width="30%" />
 <img src="screenshot2.png" alt="Game Board" width="30%" />
@@ -37,8 +37,20 @@
 
 ### Scoring
 **Multiplier:** 0 ranks = ×1 | 1 rank = ×2 | 2+ ranks = ×4
-**Win Score:** `balance + speed bonus - (balance/2 risk penalty) subject to frequent change to find balance`
+**Win Score:** `subject to frequent change to find game balance`
 
+#### Phase Flow
+1. **Reveal Phase:** Wait for both players to discard → Resolve (check for match/non-match/Joker) → Apply rewards/costs
+2. **Placement Phase:** Both players/AIs place matching rank suits (A, K, Q, J, 10) in any order. Press "Continue" or keybind (P1 = `1`, P2 = `2`) when done.
+
+#### Design Decisions
+- First discard in PvP handles blank by design (no AI equivalent needed)
+
+### Keybinds
+ 
+- In Game Restart = '.' , Return To Menu = ',' P1  Continue Button = '1' P2 Continue Button = '2'
+- No other Keybinds in any other screen yet except buttons & mouse clicks
+-
 ---
 
 ## Features
@@ -66,57 +78,16 @@
 - **Continue Buttons:** Keyboard mapping P1 = `1` key, P2 = `2` key. Press once when done → wait for other player/AI.
 - **Return to menu & restart buttons** Added keybinds for restart = `.`   return to menu = `,`
 - **AI vs AI Placement Phase** Ai now place cards at the same time during placement phase
+- **Discard Shuffle** Discarded cards are now randomly returning to the deck rather than in a predictable pattern. 
 ---
 
-# Issues I'm Working On
-
-
-### Low Priority - Keyboard Navigation System
-
-#### Main Menu Navigation
-- **Arrow keys:** Navigate up/down through buttons (PLAY, ACCOUNTS, SETTINGS, LEADERBOARD)
-- **Visual feedback:** Glowing edge around active/highlighted button
-- **Selection:** Press `0` to activate highlighted button
-- **Mouse support:** Existing click navigation continues working
-
-#### Accounts Screen Navigation
-- **Horizontal navigation:** 
-  - Arrow right → LOGIN P2 → Arrow right → DELETE
-- **Vertical navigation:** 
-  - Arrow down from P1 → P2 slot in account below
-- **Seamless 2D navigation:** 
-  - Example: P1 highlighted → Right + Down = P2 slot in account below
-- **Selection:** Press `0` to select highlighted account
-- **Bottom buttons:** Arrow navigation highlights CREATE NEW or BACK buttons, press `0` to use
-- **Mouse support:** Existing click navigation continues working
-
-#### Leaderboard Navigation
-- **Vertical scroll:** Up/Down arrows to scroll leaderboard
-- **Sorting:** Left/Right arrows to toggle between:
-  - Lowest rounds first
-  - Highest cash total first
-- **Return to menu:** New button with `,` keybind to return to main menu
-- **Mouse support:** Existing click navigation continues working
-
-#### Local PvP Navigation
-- **Shared keyboard:** Highlighted buttons must navigate both players' hands and buttons (single keyboard setup)
-- **Selection:** Press `0` to select highlighted discard or place buttons
-- **Mouse support:** Existing click navigation continues working
-
----
-
-### Implementation Notes
-
-#### Phase Flow
-1. **Reveal Phase:** Wait for both players to discard → Resolve (check for match/non-match/Joker) → Apply rewards/costs
-2. **Placement Phase:** Both players/AIs place matching rank suits (A, K, Q, J, 10) in any order. Press "Continue" or keybind (P1 = `1`, P2 = `2`) when done.
-
-#### Design Decisions
-- First discard in PvP handles blank by design (no AI equivalent needed)
 
 
 ## Testing Status
 - Fixes applied to most issues .
-v4.52 Testing in progress...
+v4.52 Notes...
+Fixes for discard bug implemented (Now Random)
+Currently working on a new feature for changing the ai movespeed with a button in settings
+Currently working on New Secondary premium currency 
 
 ```
