@@ -13,7 +13,7 @@ Rectangle ContinueButtonRect(int player);
 
 void DrawGameLayout(const GameState *g);
 void DrawPlayerUI(const GameState *g, int player);
-void DrawLeaderboard(const GameState *g);
+void DrawLeaderboard(GameState *g);  
 void DrawGameOver(GameState *g);
 void DrawCard(Card c, Rectangle rect, Color tint);
 void DrawButton(Rectangle rect, bool is_hovered, bool is_enabled, const char *text);

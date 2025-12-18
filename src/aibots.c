@@ -1,10 +1,9 @@
 #include "aibots.h"
-
+#include "main.h"
 static void AI_Bob_SelectDiscard(Card *hand, int hand_size, int *best_idx)
 {
     int joker_idx = -1;
     int low_card_idx = -1;
-
     for (int i = 0; i < hand_size; i++)
     {
         if (hand[i].rank == RANK_JOKER)
@@ -18,7 +17,6 @@ static void AI_Bob_SelectDiscard(Card *hand, int hand_size, int *best_idx)
                 low_card_idx = i;
         }
     }
-
     if (joker_idx != -1)
         *best_idx = joker_idx;
     else if (low_card_idx != -1)
@@ -26,18 +24,15 @@ static void AI_Bob_SelectDiscard(Card *hand, int hand_size, int *best_idx)
     else
         *best_idx = 0;
 }
-
 static void AI_Thea_SelectDiscard(Card *hand, int hand_size, int *best_idx)
 {
     (void)hand;
     *best_idx = rand() % hand_size;
 }
-
 static void AI_Flint_SelectDiscard(Card *hand, int hand_size, int *best_idx)
 {
     int low_card_idx = -1;
     int non_joker_idx = -1;
-
     for (int i = 0; i < hand_size; i++)
     {
         if (hand[i].rank != RANK_JOKER)
@@ -51,7 +46,6 @@ static void AI_Flint_SelectDiscard(Card *hand, int hand_size, int *best_idx)
             }
         }
     }
-
     if (low_card_idx != -1)
         *best_idx = low_card_idx;
     else if (non_joker_idx != -1)
@@ -59,17 +53,13 @@ static void AI_Flint_SelectDiscard(Card *hand, int hand_size, int *best_idx)
     else
         *best_idx = 0;
 }
-
 void AI_SelectDiscard(GameState *g, int player)
 {
     Card *hand = (player == 1) ? g->player1_hand : g->player2_hand;
     int hand_size = (player == 1) ? g->p1_hand_size : g->p2_hand_size;
     int best_idx = 0;
-
     int account_idx = (player == 1) ? g->p1_account_index : g->p2_account_index;
-
     AIType ai_type = g->selected_opponent_ai;
-
     if (account_idx >= 0 && account_idx < g->account_count)
     {
         if (g->accounts[account_idx].is_ai)
@@ -77,7 +67,6 @@ void AI_SelectDiscard(GameState *g, int player)
             ai_type = g->accounts[account_idx].ai_type;
         }
     }
-
     switch (ai_type)
     {
     case AI_BOB:
@@ -90,7 +79,6 @@ void AI_SelectDiscard(GameState *g, int player)
         AI_Flint_SelectDiscard(hand, hand_size, &best_idx);
         break;
     }
-
     if (player == 1)
     {
         g->p1_discard_idx = best_idx;
@@ -102,7 +90,6 @@ void AI_SelectDiscard(GameState *g, int player)
         g->p2_selected = true;
     }
 }
-
 void AI_UpdatePlacementPhase(GameState *g, int player)
 {
     Card *hand = (player == 1) ? g->player1_hand : g->player2_hand;
@@ -111,22 +98,17 @@ void AI_UpdatePlacementPhase(GameState *g, int player)
     float *balance = (player == 1) ? &g->p1_balance : &g->p2_balance;
     int *ranks_complete = (player == 1) ? &g->p1_completed_ranks : &g->p2_completed_ranks;
     bool *done_placing = (player == 1) ? &g->p1_done_placing : &g->p2_done_placing;
-
     if (*done_placing)
         return;
-    
-    // We repurpose 'Reshuffle_cover_timer' for P2 so both can move simultaneously 
+    // We repurpose 'Reshuffle_cover_timer' for P2 so both can move simultaneously
     // without interfering with each other's timers.
     float *timer = (player == 1) ? &g->ai_timer : &g->Reshuffle_cover_timer;
-
     *timer += GetFrameTime();
-
-    if (*timer > AI_MOVE_DELAY)
+    if (*timer > g->ai_move_delay)
     {
         *timer = 0;
         float mult = GetRewardMultiplier(*ranks_complete);
         float placement_reward = REWARD_PLACEMENT * mult;
-
         for (int i = 0; i < *hand_size; i++)
         {
             Card c = hand[i];
@@ -142,7 +124,6 @@ void AI_UpdatePlacementPhase(GameState *g, int player)
                                 cards_before++;
                         if (cards_before == 3)
                             continue;
-
                         for (int s = 0; s < 3; s++)
                         {
                             if (!slots[k][s].is_valid)
@@ -151,7 +132,6 @@ void AI_UpdatePlacementPhase(GameState *g, int player)
                                 *balance += placement_reward;
                                 PlaySound(g_place_sound);
                                 CheckRankCompletionBonus(g, player, k, cards_before);
-
                                 for (int j = i; j < *hand_size - 1; j++)
                                     hand[j] = hand[j + 1];
                                 (*hand_size)--;
@@ -164,11 +144,9 @@ void AI_UpdatePlacementPhase(GameState *g, int player)
                 }
             }
         }
-
         *done_placing = true;
-        *balance -= 1.00f;
+        *balance -= COST_PER_ROUND; // Removed magic number
         PlaySound(g_coin_sound);
-
         if (player == 1)
             g->p1_ai_done_placing_rounds = true;
     }

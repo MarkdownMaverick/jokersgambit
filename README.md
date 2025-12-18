@@ -1,93 +1,146 @@
+# Joker's Gambit v4.53
 
-# Joker's Gambit v4.52
 <p align="center">
 <img src="screenshot1.png" alt="Game Interface" width="30%" />
 <img src="screenshot2.png" alt="Game Board" width="30%" />
 <img src="screenshot3.png" alt="Gameplay Rules" width="30%" />
 </p>
 
-```markdown
 ## Game Mechanics
 
 **Objective:** First to complete **3 out of 5 ranks** (10, J, Q, K, A) wins by filling all 3 suit slots (♣♦♠) on your side of each Hearts keycard.
 
 ### Board & Deck
-- **5 Hearts keycards** (A♥, K♥, Q♥, J♥, 10♥) fixed center
+- **5 Hearts keycards** (A♥, K♥, Q♥, J♥, 10♥) fixed in center
 - **3 slots per rank** per player (P1 left, P2 right)
-- **49 cards total:** 47 standard (minus 5 Hearts) + 2 Jokers
-- **5-card hands**, reshuffled every 5 placement phases (5 ROUNDS COMPLETED) (frequently changed to find balance)
+- **49 cards total:** 47 standard (minus 5 Hearts keycards) + 2 Jokers
+- **5-card hands**, reshuffled every 5 placement phases
 
 ### Round Structure
 
-**1. Discard Phase:** Both players/Ais secretly discard 1 card in any order,( card held until next discard phase is started, then returned to a random place in the deck )
+**1. Discard Phase:** Both players secretly select and discard 1 card simultaneously. Discarded cards are held until the next discard phase, then shuffled randomly back into the deck.
 
 **2. Reveal & Resolve:**
 
-| Discarded Cards | Effect | Rewards/Penalties(changed daily to find balance) |
+| Discarded Cards | Effect | Rewards/Penalties |
 |-----------------|--------|-------------------|
-| **Same rank (pair)** | Sweep all incomplete ranks | +$1 each (× multiplier), both draw 1 |
-| **One Joker** | Sweep opponent's board | Joker player: costs the placer of the joker -$5, both draw 1 |
-| **Two Jokers** | "JOKERS GAMBIT" - sweep both boards + hands | + $50 each (× multiplier) |
-| **No match** | Normal play | Both draw 1 |
+| **Same rank (pair)** | Sweep all incomplete ranks (both players) | +$ each (× multiplier), both draw 1 |
+| **One Joker** | Sweep opponent's incomplete ranks | Joker user: -$ penalty, both draw 1 |
+| **Two Jokers** | "JOKERS GAMBIT" - sweep both boards + refresh hands | +$ each (× multiplier), |
+| **No match** | Normal play continues | -$ discard cost each, both draw 1 |
 
-- **+$1.00 per placement** (× multiplier)
-- **Big bonus** for rank completion
-- **Filled ranks are permanent** (immune to sweeps)
-- **Discards**: Discarded cards randomly positioned back in deck after Delay
+**3. Placement Phase:** Place cards from your hand onto matching rank slots. Only cards matching keycard ranks (A, K, Q, J, 10) can be placed—no Hearts or Jokers. Press "PASS" button when done (costs -$ to pass).
 
-### Scoring
-**Multiplier:** 0 ranks = ×1 | 1 rank = ×2 | 2+ ranks = ×4
-**Win Score:** `subject to frequent change to find game balance`
+### Scoring & Economy
+Rewards and costs changes daily trying to find balance. 
+**Placement Rewards:**
+- **+$ per rank card placed** (× multiplier)
+- **+$ rank completion bonus** (× multiplier)
+- **-$ for new round** to pass/continue each placement phase
 
-#### Phase Flow
-1. **Reveal Phase:** Wait for both players to discard → Resolve (check for match/non-match/Joker) → Apply rewards/costs
-2. **Placement Phase:** Both players/AIs place matching rank suits (A, K, Q, J, 10) in any order. Press "Continue" or keybind (P1 = `1`, P2 = `2`) when done.
+**Multiplier System:**
+- 0 completed ranks = ×1
+- 1 completed rank = ×2
+- 2+ completed ranks = ×4
 
-#### Design Decisions
-- First discard in PvP handles blank by design (no AI equivalent needed)
+**Game End Payouts:**
+- **Winner:** Current balance + (rounds played × $10)
+- **Loser:** Current balance - $100
+
+**Important:** Filled ranks (all 3 slots) are **permanent** and immune to sweeps!
 
 ### Keybinds
- 
-- In Game Restart = '.' , Return To Menu = ',' P1  Continue Button = '1' P2 Continue Button = '2'
-- No other Keybinds in any other screen yet except buttons & mouse clicks
--
+
+**In-Game:**
+- **Restart:** `.` (period)
+- **Main Menu:** `,` (comma)
+- **P1 Pass:** `1` (number key)
+- **P2 Pass:** `2` (number key)
+
+**Other Screens:** Mouse/click only
+
 ---
 
 ## Features
-✅ PvP / PvAI / AIvAI modes
-✅ Player accounts & persistent data
-✅ Top-100 leaderboard
-✅ Economy system with multipliers
-✅ 3 AI opponents (Bob, Thea, Flint)
-✅ Sound effects & card textures
-✅ P2 hand cover/uncover setting
-✅ Window & ui scaling: centering at 1900×1080 max with black letterbox
+
+✅ **Game Modes:** PvP, PvAI, AIvAI  
+✅ **Account System:** Persistent player profiles with balance tracking  
+✅ **Leaderboard:** Top 100 scores with dual sort modes (by cash/by rounds)  
+✅ **3 AI Opponents:** BOB (Hard), THEA (Medium), FLINT (Easy)  
+✅ **Audio & Visuals:** Sound effects, card textures, animated UI  
+✅ **Settings:**
+- P2 hand privacy toggle (local PvP/ PvAi)
+- AI move speed adjustment (Fast/Medium/Slow)
+✅ **Display:** 1900×1080 max resolution with scaling & letterbox support
 
 ### AI Behaviors
-- **BOB:** Jokers first → low cards → any  (hard)
-- **THEA:** Fully random  (medium)
-- **FLINT:** Never Jokers, prefers low cards (easy)
 
-## ✅ Resolved issues
-- **App Start:** No accounts logged in. "Play New Game" redirects to accounts screen unless two accounts are already logged in.
-- **Accounts Screen:** Two player slots for created accounts. Players can create/delete accounts. The 3 AI opponents (BOB, THEA, FLINT) are pre-created and non-modifiable.
-- **Account Selection:** Players choose between BOB, THEA, FLINT, PLAYER1, PLAYER2. Login handled by pressing account button to set seat (P1 or P2).
-- **Matchup Rules:** No Player or AI can play against themselves (prevents account conflicts).
-- **AI Positioning:** AI can sit in either P1 or P2 seat with full logic support.
-- **Discard Phase (PvP):** Both players discard 1 card in any order. Game proceeds to REVEAL phase when both complete. Cards held until next discard phase, then returned to random deck position.
-- **Continue Buttons:** Keyboard mapping P1 = `1` key, P2 = `2` key. Press once when done → wait for other player/AI.
-- **Return to menu & restart buttons** Added keybinds for restart = `.`   return to menu = `,`
-- **AI vs AI Placement Phase** Ai now place cards at the same time during placement phase
-- **Discard Shuffle** Discarded cards are now randomly returning to the deck rather than in a predictable pattern. 
+- **BOB (Hard):** Prioritizes Jokers → low cards → any
+- **THEA (Medium):** Fully random decisions
+- **FLINT (Easy):** Never discards Jokers, prefers low cards
+
 ---
 
+## Account & Login System
+
+**First Launch:** No accounts logged in. Pressing "PLAY" redirects to account manager.
+
+**Account Manager:**
+- **Player Slots:** P1 and P2 seats (left and right)
+- **Pre-created AI:** BOB, THEA, FLINT (cannot be deleted)
+- **Human Accounts:** Create custom player profiles (first + last name)
+- **Login/Logout:** Click account buttons to assign players to P1/P2 slots
+
+**Matchup Rules:**
+- ✅ Any combination allowed (PvP, PvAI, AIvAI)
+- ❌ Cannot play against yourself (same account in both slots)
+- ✅ AI can occupy either P1 or P2 seat
+
+---
+
+## Mechanics
+
+### Discard Phase (PvP)
+Both players select discards **simultaneously in any order**. Game waits for both selections before revealing. Cards are held until the **next** discard phase, then returned to a random position in the deck (prevents predictable draws).
+
+### AI Placement
+AI opponents in both P1 and P2 seats now place cards **simultaneously** during placement phase (matches human player behavior).
+
+### Continue/Pass System
+Press "PASS" button (or keybind) when done placing cards. Costs -$5. Game proceeds when **both players** pass.
+
+---
+
+## Recent Changes (v4.53)
+
+### New Features
+✅ AI move speed setting (Fast/Medium/Slow) in settings menu  
+✅ Leaderboard sorting (by highest cash or lowest rounds)  
+✅ New win/loss payout system (winner: +rounds×$10, loser: -$100)
+
+### Bug Fixes
+✅ Fixed leaderboard not auto-sorting when new entries added  
+✅ Fixed leaderboard sort button not working  
+✅ Fixed AI speed setting resetting on game restart  
+✅ Fixed discard shuffle pattern (now fully random)  
+✅ Fixed simultaneous AI placement phase logic
+
+---
+
+## Roadmap
+
+🔄 **In Development:**
+- Secondary premium currency system(TOKENS) 
+- Additional AI difficulty tweaks
+- More keybind options for menu navigation
 
 
-## Testing Status
-- Fixes applied to most issues .
-v4.52 Notes...
-Fixes for discard bug implemented (Now Random)
-Currently working on a new feature for changing the ai movespeed with a button in settings
-Currently working on New Secondary premium currency 
+📋 **Planned:**
+- Tutorial/help screen
+- Achievement system
+- Card animation polish
+- Audio volume controls
 
-```
+---
+
+**Built with:** C, Raylib, cJSON  

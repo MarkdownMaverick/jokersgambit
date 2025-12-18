@@ -37,14 +37,14 @@
 #define MAX_LEADERBOARD_NAME_LEN 128
 // Game constants for economy and rewards/costs.
 #define COST_DISCARD 1.00f
+#define COST_PER_ROUND 5.00f 
 #define REWARD_MATCH 10.00f
 #define REWARD_DOUBLE_JOKER 50.00f
 #define REWARD_PLACEMENT 2.00f
-#define REWARD_COMPLETION 15.00f
+#define REWARD_COMPLETION 20.00f
 #define JOKER_DISCARD 5.00f
-#define AI_MOVE_DELAY 2.0f
-#define SPEED_BONUS_BASE 500.00f
-#define BONUS_CAP 1000.00f
+#define SPEED_BONUS_BASE 250.00f
+#define BONUS_CAP 500.00f
 typedef enum
 {
     AI_BOB = 0,
@@ -132,6 +132,7 @@ typedef struct Account
 } Account;
 typedef struct
 {
+    float ai_move_delay;
     Card deck[TOTAL_DECK_CARDS];
     int top_card_index;
     int current_deck_size;

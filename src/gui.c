@@ -18,7 +18,6 @@ float GetRankY(int key_idx)
 {
     return GRID_START_Y + key_idx * ROW_SPACING;
 }
-
 Rectangle KeyCardRect(int key_idx)
 {
     float y = GetRankY(key_idx);
@@ -78,11 +77,11 @@ void DrawButton(Rectangle rect, bool is_hovered, bool is_enabled, const char *te
     int text_len = MeasureText(text, 14);
     DrawText(text, (int)(rect.x + rect.width / 2 - text_len / 2), (int)(rect.y + rect.height / 2 - 7), 14, BLACK);
 }
-// Simple bubble sort for leaderboard entries
 static void SortLeaderboard(GameState *g)
 {
     if (g->leaderboard_sort_by_rounds)
     {
+        // Sort by LOWEST rounds first (fastest wins)
         for (int i = 0; i < g->leaderboard_count - 1; i++)
         {
             for (int j = i + 1; j < g->leaderboard_count; j++)
@@ -98,6 +97,7 @@ static void SortLeaderboard(GameState *g)
     }
     else
     {
+        // Sort by HIGHEST winnings first
         for (int i = 0; i < g->leaderboard_count - 1; i++)
         {
             for (int j = i + 1; j < g->leaderboard_count; j++)
@@ -112,9 +112,9 @@ static void SortLeaderboard(GameState *g)
         }
     }
 }
-//
-void DrawLeaderboard(const GameState *g)
+void DrawLeaderboard(GameState *g) 
 {
+    SortLeaderboard(g);
     static int scroll_offset = 0;
     const int entries_per_page = 15;
     const int max_scroll = (g->leaderboard_count > entries_per_page) ? (g->leaderboard_count - entries_per_page) : 0;
@@ -124,36 +124,24 @@ void DrawLeaderboard(const GameState *g)
     if (wheel < 0)
         scroll_offset = (scroll_offset < max_scroll) ? scroll_offset + 1 : max_scroll;
     Rectangle bg = {CENTER_X - 650, 120, 1300, 900};
-    // 1. Draw a dark, slightly transparent background for context
+    // Dark, slightly transparent background
     DrawRectangleRec(bg, Fade(BLACK, 0.9f));
     float t_total = (float)GetTime();
-    // --- START MODIFIED GRADIENT DRAWING WITH WAVE ANIMATION ---
-    // Base colors for the animation
-    Color dark_base = (Color){0, 0, 20, 255};      // Very Dark Blue Base
-    Color bright_wave = (Color){0, 100, 255, 255}; // Bright Blue Highlight
+    // Animated wave background
+    Color dark_base = (Color){0, 0, 20, 255};
+    Color bright_wave = (Color){0, 100, 255, 255};
     for (int y = (int)bg.y; y < (int)(bg.y + bg.height); y++)
     {
-        // t_norm: Normalized vertical position (0.0 at top, 1.0 at bottom)
         float t_norm = (float)(y - bg.y) / bg.height;
-        // Wave Calculation:
-        // A sine wave is used to create a moving vertical pattern.
-        // t_total * 3.0f controls wave speed.
-        // y * 0.015f controls wave density/frequency.
         float wave_factor = sinf(t_total * 3.0f + y * 0.015f);
-        // Intensity: Normalize the sine wave from 0.0 to 1.0
         float intensity = (wave_factor + 1.0f) * 0.5f;
-        // Fade the intensity out towards the bottom (1.0 - t_norm)
-        // so the wave effect is more subtle at the bottom of the screen.
         intensity *= (1.0f - t_norm * 0.4f);
-        // Final Color: Interpolate between the dark base and the bright wave color
-        // modulated by the moving 'intensity' factor.
-        Color final_color = ColorLerp(dark_base, bright_wave, intensity * 0.4f); // Max 40% of bright_wave
+        Color final_color = ColorLerp(dark_base, bright_wave, intensity * 0.4f);
         DrawRectangle(bg.x, y, (int)bg.width, 1, final_color);
     }
-    // 3. Draw a vibrant, neon-style border
-    // Draw another border with a very high alpha fade to create a glow effect
+    // Border
     DrawRectangleLinesEx(bg, 9, Fade(DARKBLUE, 0.4f));
-    DrawRectangleLinesEx(bg, 3, Fade(DARKBLUE, 0.8f)); // Sharper inner line
+    DrawRectangleLinesEx(bg, 3, Fade(DARKBLUE, 0.8f));
     const char *title = "HIGH ROLLERS";
     int title_w = MeasureText(title, 50);
     DrawText(title, CENTER_X - title_w / 2, 130, 50, GOLD);
@@ -162,8 +150,9 @@ void DrawLeaderboard(const GameState *g)
     Rectangle sort_btn = {CENTER_X + 400, 130, 200, 50};
     bool sort_hover = CheckCollisionPointRec(mouse, sort_btn);
     DrawRectangleRec(sort_btn, sort_hover ? GOLD : ORANGE);
-    const char *sort_text = g->leaderboard_sort_by_rounds ? "BY rounds" : "BY CASH";
-    DrawText(sort_text, sort_btn.x + 40, sort_btn.y + 15, 25, BLACK);
+    const char *sort_text = g->leaderboard_sort_by_rounds ? "BY ROUNDS" : "BY CASH";
+    DrawText(sort_text, sort_btn.x + 30, sort_btn.y + 15, 25, BLACK);
+    // Column headers
     int x_rank = (int)CENTER_X - 500;
     int x_name = x_rank + 100;
     int x_cash = x_rank + 500;
@@ -172,8 +161,9 @@ void DrawLeaderboard(const GameState *g)
     DrawText("Rank", x_rank, 200, 28, Fade(WHITE, 0.9f));
     DrawText("Winner", x_name, 200, 28, Fade(WHITE, 0.9f));
     DrawText("Cash", x_cash, 200, 28, Fade(WHITE, 0.9f));
-    DrawText("rounds", x_rounds, 200, 28, Fade(WHITE, 0.9f));
+    DrawText("Rounds", x_rounds, 200, 28, Fade(WHITE, 0.9f));
     DrawText("Date", x_date, 200, 28, Fade(WHITE, 0.9f));
+    // Display entries
     for (int i = 0; i < entries_per_page && (i + scroll_offset) < g->leaderboard_count; i++)
     {
         const LeaderboardEntry *e = &g->leaderboard[i + scroll_offset];
@@ -197,114 +187,42 @@ void DrawLeaderboard(const GameState *g)
     }
     DrawText("Press ESC or click anywhere to return", CENTER_X - 300, 1010, 24, Fade(WHITE, 0.6f));
 }
-void DrawGameOver(GameState *g)
-{
-    DrawRectangle(0, 0, SCREEN_W, SCREEN_H, Fade(BLACK, 0.8f));
-    const char *winner_name = (g->winner == 1) ? GetPlayerName(g, 1) : GetPlayerName(g, 2);
-    char win_text[128];
-    snprintf(win_text, sizeof(win_text), "%s WINS!", winner_name);
-    int tw = MeasureText(win_text, 90);
-    DrawText(win_text, (SCREEN_W - tw) / 2, SCREEN_H / 2 - 250, 90, GOLD);
-    DrawText("CONGRATULATIONS!",
-             (SCREEN_W - MeasureText("CONGRATULATIONS!", 60)) / 2,
-             SCREEN_H / 2 - 150, 60, YELLOW);
-    float winner_score = (g->winner == 1) ? g->final_score_p1 : g->final_score_p2;
-    float winner_bonus = 10.0f * g->total_rounds;
-    DrawText(TextFormat("Final Balance: $%.2f", winner_score),
-             (SCREEN_W - MeasureText(TextFormat("Final Balance: $9999.99"), 40)) / 2,
-             SCREEN_H / 2 - 50, 40, LIME);
-    DrawText(TextFormat("Move Bonus: +$%.2f (%d rounds)", winner_bonus, g->total_rounds),
-             (SCREEN_W - MeasureText(TextFormat("Move Bonus: +$999.99 (99 rounds)"), 35)) / 2,
-             SCREEN_H / 2, 35, GREEN);
-    const char *loser_name = (g->winner == 1) ? GetPlayerName(g, 2) : GetPlayerName(g, 1);
-    float loser_score = (g->winner == 1) ? g->final_score_p2 : g->final_score_p1;
-    float loser_penalty = -1.0f * g->total_rounds;
-    DrawText(TextFormat("%s: $%.2f (Penalty: $%.2f)", loser_name, loser_score, loser_penalty),
-             (SCREEN_W - MeasureText(TextFormat("PlayerName: $9999.99 (Penalty: $-999.99)"), 30)) / 2,
-             SCREEN_H / 2 + 60, 30, ORANGE);
-    // Animated coins background
-    float t = (float)GetTime();
-    int coinCount = 150;
-    for (int i = 0; i < coinCount; i++)
-    {
-        // 1. Coin position and Movement Logic for Win Screen
-        float xPos = fmodf(i * 737.5f, (float)SCREEN_W);
-        float speed = 200.0f + (fmodf(i * 13.0f, 100.0f));
-        float yOffset = i * 50.0f;
-        float yPos = fmodf(t * speed + yOffset, (float)SCREEN_H + 100) - 50;
-        xPos += sinf(t * 3.0f + i) * 15.0f;
-        float radius = 12.0f + fmodf(i, 8.0f); // Slightly larger to fit the symbol
-        Vector2 center = {xPos, yPos};
-        // 2. Draw the Coin Body
-        DrawCircleV(center, radius, GOLD);        // Main coin
-        DrawCircleLinesV(center, radius, ORANGE); // Rim detail
-        // 3. Draw the $ Symbol
-        // We adjust the font size based on the coin's radius
-        int fontSize = (int)(radius * 1.2f);
-        const char *symbol = "$";
-        int textWidth = MeasureText(symbol, fontSize);
-        float spin = cosf(t * 5.0f + i) * 0.1f; // Slight rotation effect
-        // Center the "$" inside the circle
-        DrawText(symbol,
-                 (int)(center.x - textWidth / 2 + spin * radius),
-                 (int)(center.y - fontSize / 2 + spin * radius),
-                 fontSize, DARKGREEN);
-        // 4. Shine Glint (Optional but looks great)
-        DrawCircleV((Vector2){center.x - radius / 3, center.y - radius / 3},
-                    radius / 4, Fade(WHITE, 0.5f));
-    }
-    Vector2 mouse = GetMousePosition();
-    Rectangle restart_btn = {CENTER_X - 450, SCREEN_H - 150, 280, 80};
-    Rectangle menu_btn = {CENTER_X - 140, SCREEN_H - 150, 280, 80};
-    Rectangle quit_btn = {CENTER_X + 170, SCREEN_H - 150, 280, 80};
-    bool restart_hover = CheckCollisionPointRec(mouse, restart_btn);
-    bool menu_hover = CheckCollisionPointRec(mouse, menu_btn);
-    bool quit_hover = CheckCollisionPointRec(mouse, quit_btn);
-    DrawRectangleRec(restart_btn, restart_hover ? LIME : DARKGREEN);
-    DrawRectangleRec(menu_btn, menu_hover ? SKYBLUE : BLUE);
-    DrawRectangleRec(quit_btn, quit_hover ? RED : MAROON);
-    DrawText("RESTART", restart_btn.x + 70, restart_btn.y + 25, 30, WHITE);
-    DrawText("MAIN MENU", menu_btn.x + 40, menu_btn.y + 25, 30, WHITE);
-    DrawText("QUIT", quit_btn.x + 100, quit_btn.y + 25, 30, WHITE);
-}
 Rectangle ContinueButtonRect(int player)
 {
     // Get the reference button position (using index 4 for P1 end, index 0 for P2 start)
     // We adjust the X offset so they sit "outside" the hand range
     Rectangle ref_rect;
     float x;
-
-    if (player == 1) {
-        ref_rect = ButtonRect(1, 4); 
+    if (player == 1)
+    {
+        ref_rect = ButtonRect(1, 4);
         x = ref_rect.x + ref_rect.width + 10; // 10px after the last P1 button
-    } else {
+    }
+    else
+    {
         ref_rect = ButtonRect(2, 0);
         x = ref_rect.x - 80 - 10; // 80px width + 10px gap before the first P2 button
     }
-
-    return (Rectangle){ x, ref_rect.y, 80, ref_rect.height };
+    return (Rectangle){x, ref_rect.y, 80, ref_rect.height};
 }
 void DrawContinueButtons(const GameState *g, Vector2 mouse)
 {
     if (g->state != STATE_WAIT_FOR_TURN)
         return;
-
     for (int p = 1; p <= 2; p++)
     {
         // Check if player is human and not finished
-        bool is_human_active = (p == 1) ? (!g->p1_done_placing && !IsPlayerAI(g, 1)) 
+        bool is_human_active = (p == 1) ? (!g->p1_done_placing && !IsPlayerAI(g, 1))
                                         : (!g->p2_done_placing && !IsPlayerAI(g, 2));
-
         if (is_human_active)
         {
             Rectangle btn = ContinueButtonRect(p);
             bool hover = CheckCollisionPointRec(mouse, btn);
             Color tint = hover ? Fade(RAYWHITE, 0.7f) : RAYWHITE;
-
             // Draw the texture (btn.png)
             if (g_button_texture.id != 0)
             {
-                DrawTexturePro(g_button_texture, 
+                DrawTexturePro(g_button_texture,
                                (Rectangle){0, 0, (float)g_button_texture.width, (float)g_button_texture.height},
                                btn, (Vector2){0, 0}, 0.0f, tint);
             }
@@ -312,7 +230,6 @@ void DrawContinueButtons(const GameState *g, Vector2 mouse)
             {
                 DrawRectangleRec(btn, hover ? GOLD : ORANGE); // Fallback
             }
-
             int text_w = MeasureText("PASS", 20);
             DrawText("PASS", btn.x + (btn.width - text_w) / 2, btn.y + (btn.height / 2 - 10), 20, BLACK);
         }
@@ -401,11 +318,9 @@ void DrawGameLayout(const GameState *g)
             Color tint = (g->p1_discard_ready && i == g->p1_discard_idx) ? YELLOW : RAYWHITE;
             DrawCard(g->player1_hand[i], p1_rect, tint);
         }
-
         // P1 Button Logic
         bool p1_btn_enabled = false;
         const char *p1_btn_text = "---";
-
         if (g->state == STATE_P1_SELECT_DISCARD && i < g->p1_hand_size)
         {
             if (!IsPlayerAI(g, 1))
@@ -422,10 +337,8 @@ void DrawGameLayout(const GameState *g)
         {
             p1_btn_text = "PLACE";
         }
-
         bool p1_btn_hovered = CheckCollisionPointRec(mouse, ButtonRect(1, i));
         DrawButton(ButtonRect(1, i), p1_btn_hovered, p1_btn_enabled, p1_btn_text);
-
         // ============================================================
         // PLAYER 2 HAND & BUTTON
         // ============================================================
@@ -436,7 +349,6 @@ void DrawGameLayout(const GameState *g)
             bool should_cover = g->cover_p2_cards &&
                                 !IsPlayerAI(g, 1) &&
                                 g->state == STATE_P1_SELECT_DISCARD;
-
             if (should_cover)
             {
                 // Draw card back
@@ -453,11 +365,9 @@ void DrawGameLayout(const GameState *g)
                 DrawCard(g->player2_hand[i], p2_rect, tint);
             }
         }
-
         // P2 Button Logic
         bool p2_btn_enabled = false;
         const char *p2_btn_text = "---";
-
         if (g->state == STATE_P1_SELECT_DISCARD && i < g->p2_hand_size)
         {
             if (!IsPlayerAI(g, 2))
@@ -474,11 +384,9 @@ void DrawGameLayout(const GameState *g)
         {
             p2_btn_text = "PLACE";
         }
-
         bool p2_btn_hovered = CheckCollisionPointRec(mouse, ButtonRect(2, i));
         DrawButton(ButtonRect(2, i), p2_btn_hovered, p2_btn_enabled, p2_btn_text);
     }
-
     // 4. Draw Discard Piles
     Rectangle d1_rect = DiscardPileRect(1);
     if (g->revealed_p1.is_valid)
@@ -491,7 +399,6 @@ void DrawGameLayout(const GameState *g)
                        (Rectangle){0, 0, (float)g_card_back_texture.width, (float)g_card_back_texture.height},
                        d1_rect, (Vector2){0, 0}, 0.0f, Fade(WHITE, 1.00f));
     }
-
     Rectangle d2_rect = DiscardPileRect(2);
     if (g->revealed_p2.is_valid)
     {
@@ -503,7 +410,76 @@ void DrawGameLayout(const GameState *g)
                        (Rectangle){0, 0, (float)g_card_back_texture.width, (float)g_card_back_texture.height},
                        d2_rect, (Vector2){0, 0}, 0.0f, Fade(WHITE, 1.00f));
     }
-
     // Draw Continue Buttons (for placement phase)
     DrawContinueButtons(g, mouse);
+}
+void DrawGameOver(GameState *g)
+{
+    DrawRectangle(0, 0, SCREEN_W, SCREEN_H, Fade(BLACK, 0.8f));
+    const char *winner_name = (g->winner == 1) ? GetPlayerName(g, 1) : GetPlayerName(g, 2);
+    const char *loser_name = (g->winner == 1) ? GetPlayerName(g, 2) : GetPlayerName(g, 1);
+    char win_text[128];
+    snprintf(win_text, sizeof(win_text), "%s WINS!", winner_name);
+    int tw = MeasureText(win_text, 90);
+    DrawText(win_text, (SCREEN_W - tw) / 2, SCREEN_H / 2 - 250, 90, GOLD);
+    DrawText("CONGRATULATIONS!",
+             (SCREEN_W - MeasureText("CONGRATULATIONS!", 60)) / 2,
+             SCREEN_H / 2 - 150, 60, YELLOW);
+    // Get final scores (these already include the game balance)
+    float winner_score = (g->winner == 1) ? g->final_score_p1 : g->final_score_p2;
+    float loser_score = (g->winner == 1) ? g->final_score_p2 : g->final_score_p1;
+    // Winner gets bonus: rounds × $10.00
+    float winner_bonus = 10.0f * g->total_rounds;
+    DrawText(TextFormat("Final Balance: $%.2f", winner_score),
+             (SCREEN_W - MeasureText(TextFormat("Final Balance: $9999.99"), 40)) / 2,
+             SCREEN_H / 2 - 50, 40, LIME);
+    DrawText(TextFormat("Victory Bonus: +$%.2f (%d rounds × $10)", winner_bonus, g->total_rounds),
+             (SCREEN_W - MeasureText(TextFormat("Victory Bonus: +$999.99 (99 rounds × $10)"), 35)) / 2,
+             SCREEN_H / 2, 35, GREEN);
+    // Loser loses flat $100.00
+    float loser_penalty = -100.0f;
+    DrawText(TextFormat("%s - Final Balance: $%.2f", loser_name, loser_score),
+             (SCREEN_W - MeasureText(TextFormat("PlayerNameLong - Final Balance: $9999.99"), 30)) / 2,
+             SCREEN_H / 2 + 60, 30, ORANGE);
+    DrawText(TextFormat("Defeat Penalty: $%.2f", loser_penalty),
+             (SCREEN_W - MeasureText(TextFormat("Defeat Penalty: $-999.99"), 28)) / 2,
+             SCREEN_H / 2 + 95, 28, RED);
+    // Animated coins background
+    float t = (float)GetTime();
+    int coinCount = 150;
+    for (int i = 0; i < coinCount; i++)
+    {
+        float xPos = fmodf(i * 737.5f, (float)SCREEN_W);
+        float speed = 200.0f + (fmodf(i * 13.0f, 100.0f));
+        float yOffset = i * 50.0f;
+        float yPos = fmodf(t * speed + yOffset, (float)SCREEN_H + 100) - 50;
+        xPos += sinf(t * 3.0f + i) * 15.0f;
+        float radius = 12.0f + fmodf(i, 8.0f);
+        Vector2 center = {xPos, yPos};
+        DrawCircleV(center, radius, GOLD);
+        DrawCircleLinesV(center, radius, ORANGE);
+        int fontSize = (int)(radius * 1.2f);
+        const char *symbol = "$";
+        int textWidth = MeasureText(symbol, fontSize);
+        float spin = cosf(t * 5.0f + i) * 0.1f;
+        DrawText(symbol,
+                 (int)(center.x - textWidth / 2 + spin * radius),
+                 (int)(center.y - fontSize / 2 + spin * radius),
+                 fontSize, DARKGREEN);
+        DrawCircleV((Vector2){center.x - radius / 3, center.y - radius / 3},
+                    radius / 4, Fade(WHITE, 0.5f));
+    }
+    Vector2 mouse = GetMousePosition();
+    Rectangle restart_btn = {CENTER_X - 450, SCREEN_H - 150, 280, 80};
+    Rectangle menu_btn = {CENTER_X - 140, SCREEN_H - 150, 280, 80};
+    Rectangle quit_btn = {CENTER_X + 170, SCREEN_H - 150, 280, 80};
+    bool restart_hover = CheckCollisionPointRec(mouse, restart_btn);
+    bool menu_hover = CheckCollisionPointRec(mouse, menu_btn);
+    bool quit_hover = CheckCollisionPointRec(mouse, quit_btn);
+    DrawRectangleRec(restart_btn, restart_hover ? LIME : DARKGREEN);
+    DrawRectangleRec(menu_btn, menu_hover ? SKYBLUE : BLUE);
+    DrawRectangleRec(quit_btn, quit_hover ? RED : MAROON);
+    DrawText("RESTART", restart_btn.x + 70, restart_btn.y + 25, 30, WHITE);
+    DrawText("MAIN MENU", menu_btn.x + 40, menu_btn.y + 25, 30, WHITE);
+    DrawText("QUIT", quit_btn.x + 100, quit_btn.y + 25, 30, WHITE);
 }
