@@ -13,7 +13,7 @@ void ShowAccountStatus(GameState *g, const char *msg)
     g->account_status_timer = GetTime();
 }
 // ─────────────────────────────────────────────────────────────────────────────
-//  MAIN MENU - AI vs AI REMOVED
+//  MAIN MENU 
 // ─────────────────────────────────────────────────────────────────────────────
 void DrawMainMenu(GameState *g)
 {
@@ -23,7 +23,7 @@ void DrawMainMenu(GameState *g)
     Rectangle settings_rect = {CENTER_X - 150, 500, 300, 60};
     Rectangle leaderboard_rect = {CENTER_X - 150, 600, 300, 60};
     Vector2 mouse = GetMousePosition();
-    DrawText("JOKERS GAMBIT", CENTER_X - 350, 150, 90, GOLD);
+    DrawText("JOKERS GAMBIT", (int)(CENTER_X - 350.0f), 150, 90, GOLD);
     bool play_hover = CheckCollisionPointRec(mouse, play_rect);
     DrawRectangleRec(play_rect, play_hover ? LIME : GREEN);
     DrawText("PLAY", (int)play_rect.x + 110, (int)play_rect.y + 15, 30, BLACK);
@@ -93,9 +93,9 @@ void UpdateMainMenu(GameState *g, Vector2 mouse)
 // ─────────────────────────────────────────────────────────────────────────────
 void DrawSettings(GameState *g)
 {
-    DrawText("SETTINGS", CENTER_X - 200, 100, 80, GOLD);
+    DrawText("SETTINGS", (int)(CENTER_X - 200.0f), 100, 80, GOLD);
     // Card Cover Toggle
-    DrawText("P2 Card Privacy:", CENTER_X - 300, 300, 40, WHITE);
+    DrawText("P2 Card Privacy:", (int)(CENTER_X - 300.0f), 300, 40, WHITE);
     Rectangle cover_btn_rect = {CENTER_X - 150, 380, 300, 80};
     Vector2 mouse = GetMousePosition();
     bool cover_hover = CheckCollisionPointRec(mouse, cover_btn_rect);
@@ -103,10 +103,10 @@ void DrawSettings(GameState *g)
     DrawRectangleRec(cover_btn_rect, cover_hover ? Fade(cover_color, 0.8f) : cover_color);
     const char *cover_text = g->cover_p2_cards ? "COVERED" : "UNCOVERED";
     int text_w = MeasureText(cover_text, 35);
-    DrawText(cover_text, (int)CENTER_X - (float)text_w / 2, 380 + 25, 35, BLACK);
-    DrawText("(Hides P2 cards from view during local play)", CENTER_X - 300, 480, 25, LIGHTGRAY);
+    DrawText(cover_text, (int)(CENTER_X - (float)text_w / 2.0f), 380 + 25, 35, BLACK);
+    DrawText("(Hides P2 cards from view during local play)", (int)(CENTER_X - 300.0f), 480, 25, LIGHTGRAY);
     // AI Move Speed Setting
-    DrawText("AI Move Speed:", CENTER_X - 300, 550, 40, WHITE);
+    DrawText("AI Move Speed:", (int)(CENTER_X - 300.0f), 550, 40, WHITE);
     Rectangle ai_speed_rect = {CENTER_X - 150, 620, 300, 80};
     bool ai_speed_hover = CheckCollisionPointRec(mouse, ai_speed_rect);
     // Determine current speed text and color
@@ -129,13 +129,13 @@ if (fabsf(g->ai_move_delay - 1.0f) < 0.001f)
     }
     DrawRectangleRec(ai_speed_rect, ai_speed_hover ? Fade(speed_color, 0.8f) : speed_color);
     int speed_text_w = MeasureText(speed_text, 35);
-    DrawText(speed_text, (int)CENTER_X - (float)speed_text_w / 2, 620 + 25, 35, BLACK);
-    DrawText("(Click to cycle: Fast → Medium → Slow)", CENTER_X - 270, 720, 25, LIGHTGRAY);
+    DrawText(speed_text, (int)(CENTER_X - (float)speed_text_w / 2.0f), 620 + 25, 35, BLACK);
+    DrawText("(Click to cycle: Fast → Medium → Slow)", (int)(CENTER_X - 270.0f), 720, 25, LIGHTGRAY);
     // Back Button
     Rectangle back_rect = {CENTER_X - 150, SCREEN_H - 180, 300, 80};
     bool back_hover = CheckCollisionPointRec(mouse, back_rect);
     DrawRectangleRec(back_rect, back_hover ? RED : MAROON);
-    DrawText("BACK", (int)back_rect.x + 100, (float)back_rect.y + 25, 35, WHITE);
+    DrawText("BACK", (int)back_rect.x + 100, (int)(back_rect.y + 25.0f), 35, WHITE);
 }
 void UpdateSettings(GameState *g, Vector2 mouse)
 {
@@ -176,7 +176,7 @@ void UpdateSettings(GameState *g, Vector2 mouse)
 // ─────────────────────────────────────────────────────────────────────────────
 void DrawAccountsManager(const GameState *g)
 {
-    DrawText("ACCOUNT MANAGER", CENTER_X - 900, 80, 20, GOLD);
+    DrawText("ACCOUNT MANAGER", (int)(CENTER_X - 900.0f), 80, 20, GOLD);
     // 1. Draw Current Login Status Top Header
     const char *p1 = (g->p1_account_index == -1) ? "---" : GetPlayerName(g, 1);
     const char *p2 = (g->p2_account_index == -1) ? "---" : GetPlayerName(g, 2);
@@ -188,7 +188,7 @@ void DrawAccountsManager(const GameState *g)
     if (GetTime() - g->account_status_timer < 2.0)
     {
         float alpha = 1.0f - (float)(GetTime() - g->account_status_timer) / 2.0f;
-        DrawText(g->account_status_message, (int)CENTER_X - (float)MeasureText(g->account_status_message, 30) / 2.0f, 220, 30, Fade(GREEN, alpha));
+        DrawText(g->account_status_message, (int)(CENTER_X - (float)MeasureText(g->account_status_message, 30) / 2.0f), 220, 30, Fade(GREEN, alpha));
     }
     int y = 280;
     // 3. Draw Accounts List
@@ -207,14 +207,14 @@ void DrawAccountsManager(const GameState *g)
         DrawRectangleRec(row_rect, bg_col);
         DrawRectangleLinesEx(row_rect, 2, a->is_ai ? PURPLE : DARKGRAY);
         // Name & Stats
-        DrawText(a->first_name, row_rect.x + 20, row_rect.y + 20, 40, WHITE);
+        DrawText(a->first_name, (int)(row_rect.x + 20.0f), (int)(row_rect.y + 20.0f), 40, WHITE);
         if (!a->is_ai)
-            DrawText(a->last_name, row_rect.x + 20 + MeasureText(a->first_name, 40) + 10, row_rect.y + 20, 40, WHITE);
-        DrawText(TextFormat("$%.2f  W:%d L:%d", a->balance, a->wins, a->losses), row_rect.x + 20, row_rect.y + 65, 20, LIGHTGRAY);
+            DrawText(a->last_name, (int)(row_rect.x + 20.0f + (float)MeasureText(a->first_name, 40) + 10.0f), (int)(row_rect.y + 20.0f), 40, WHITE);
+        DrawText(TextFormat("$%.2f  W:%d L:%d", a->balance, a->wins, a->losses), (int)(row_rect.x + 20.0f), (int)(row_rect.y + 65.0f), 20, LIGHTGRAY);
         // AI Label
         if (a->is_ai)
         {
-            DrawText("[AI]", row_rect.x + 350, row_rect.y + 30, 30, PURPLE);
+            DrawText("[AI]", (int)(row_rect.x + 350.0f), (int)(row_rect.y + 30.0f), 30, PURPLE);
         }
         // --- BUTTONS ---
         float btn_w = 140;
@@ -226,14 +226,14 @@ void DrawAccountsManager(const GameState *g)
         Color p1_col = is_p1 ? RED : LIME;
         const char *p1_txt = is_p1 ? "LOGOUT P1" : "LOGIN P1";
         DrawRectangleRec(btn_p1, hover_p1 ? Fade(p1_col, 0.8f) : p1_col);
-        DrawText(p1_txt, btn_p1.x + 10, btn_p1.y + 10, 20, BLACK);
+        DrawText(p1_txt, (int)(btn_p1.x + 10.0f), (int)(btn_p1.y + 10.0f), 20, BLACK);
         // P2 Button
         Rectangle btn_p2 = {start_x + 160, row_rect.y + 30, btn_w, btn_h};
         bool hover_p2 = CheckCollisionPointRec(GetMousePosition(), btn_p2);
         Color p2_col = is_p2 ? RED : ORANGE;
         const char *p2_txt = is_p2 ? "LOGOUT P2" : "LOGIN P2";
         DrawRectangleRec(btn_p2, hover_p2 ? Fade(p2_col, 0.8f) : p2_col);
-        DrawText(p2_txt, btn_p2.x + 10, btn_p2.y + 10, 20, BLACK);
+        DrawText(p2_txt, (int)(btn_p2.x + 10.0f), (int)(btn_p2.y + 10.0f), 20, BLACK);
     
         y += 110;
     }
@@ -242,8 +242,8 @@ void DrawAccountsManager(const GameState *g)
     Rectangle back = {CENTER_X + 20, SCREEN_H - 120, 280, 80};
     DrawRectangleRec(create, CheckCollisionPointRec(GetMousePosition(), create) ? LIME : DARKGREEN);
     DrawRectangleRec(back, CheckCollisionPointRec(GetMousePosition(), back) ? RED : MAROON);
-    DrawText("CREATE NEW", create.x + 50, create.y + 25, 30, BLACK);
-    DrawText("BACK", back.x + 100, back.y + 25, 30, WHITE);
+    DrawText("CREATE NEW", (int)(create.x + 50.0f), (int)(create.y + 25.0f), 30, BLACK);
+    DrawText("BACK", (int)(back.x + 100.0f), (int)(back.y + 25.0f), 30, WHITE);
 }
 void UpdateAccountsManager(GameState *g, Vector2 mouse)
 {
@@ -324,86 +324,5 @@ void UpdateAccountsManager(GameState *g, Vector2 mouse)
         {
             g->state = STATE_MAIN_MENU;
         }
-    }
-}
-// ─────────────────────────────────────────────────────────────────────────────
-//  ACCOUNT CREATION
-// ─────────────────────────────────────────────────────────────────────────────
-void DrawAccountCreate(const GameState *g)
-{
-    (void)g;
-    DrawRectangle(0, 0, SCREEN_W, SCREEN_H, Fade(BLACK, 0.8f));
-    DrawText("NEW ACCOUNT", CENTER_X - 280, 200, 80, LIME);
-    const char *label1 = "First Name";
-    const char *label2 = "Last Name";
-    Color col1 = (current_name_field == 1) ? YELLOW : WHITE;
-    Color col2 = (current_name_field == 2) ? YELLOW : WHITE;
-    DrawText(label1, CENTER_X - 150, 360, 40, col1);
-    DrawText(label2, CENTER_X - 150, 480, 40, col2);
-    Rectangle r1 = {CENTER_X - 140, 400, 280, 70};
-    Rectangle r2 = {CENTER_X - 140, 520, 280, 70};
-    DrawRectangleRec(r1, DARKGRAY);
-    DrawRectangleLinesEx(r1, 4, col1);
-    DrawRectangleRec(r2, DARKGRAY);
-    DrawRectangleLinesEx(r2, 4, col2);
-    DrawText(new_first_name, r1.x + 20, r1.y + 20, 40, WHITE);
-    DrawText(new_last_name, r2.x + 20, r2.y + 20, 40, WHITE);
-    if (current_name_field == 1 && ((int)(GetTime() * 2) % 2))
-        DrawText("_", r1.x + 25 + MeasureText(new_first_name, 40), r1.y + 20, 40, WHITE);
-    if (current_name_field == 2 && ((int)(GetTime() * 2) % 2))
-        DrawText("_", r2.x + 25 + MeasureText(new_last_name, 40), r2.y + 20, 40, WHITE);
-    Rectangle confirm = {CENTER_X - 220, 820, 200, 80};
-    Rectangle cancel = {CENTER_X + 20, 820, 200, 80};
-    bool ok = strlen(new_first_name) >= 2 && strlen(new_last_name) >= 2;
-    DrawRectangleRec(confirm, ok ? LIME : DARKGREEN);
-    DrawRectangleRec(cancel, RED);
-    DrawText("CREATE", confirm.x + 40, confirm.y + 25, 35, BLACK);
-    DrawText("CANCEL", cancel.x + 40, cancel.y + 25, 35, WHITE);
-    DrawRectangleLines(confirm.x, confirm.y, confirm.width, confirm.height, RED);
-    DrawRectangleLines(cancel.x, cancel.y, cancel.width, cancel.height, BLUE);
-}
-void UpdateAccountCreate(GameState *g)
-{
-    int key = GetCharPressed();
-    char *field = (current_name_field == 1) ? new_first_name : new_last_name;
-    while (key)
-    {
-        if ((key >= 'A' && key <= 'Z') || (key >= 'a' && key <= 'z'))
-        {
-            long unsigned int len = strlen(field);
-            if (len < MAX_ACCOUNT_NAME_LEN)
-            {
-                field[len] = (char)key;
-                field[len + 1] = '\0';
-            }
-        }
-        key = GetCharPressed();
-    }
-    if (IsKeyPressed(KEY_BACKSPACE) && strlen(field) > 0)
-        field[strlen(field) - 1] = '\0';
-    if (IsKeyPressed(KEY_TAB) || IsKeyPressed(KEY_ENTER))
-        current_name_field = (current_name_field == 1) ? 2 : 1;
-    Vector2 m = GetMousePosition();
-    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
-    {
-        Rectangle confirm = {CENTER_X - 220, 820, 200, 80};
-        Rectangle cancel = {CENTER_X + 20, 820, 200, 80};
-        if (CheckCollisionPointRec(m, confirm))
-        {
-            if (strlen(new_first_name) >= 2 && strlen(new_last_name) >= 2)
-            {
-                if (CreateNewAccount(g, new_first_name, new_last_name))
-                {
-                    ShowAccountStatus(g, "Account created successfully!");
-                    g->state = STATE_ACCOUNTS_MANAGER;
-                }
-                else
-                {
-                    ShowAccountStatus(g, "Name already taken!");
-                }
-            }
-        }
-        else if (CheckCollisionPointRec(m, cancel))
-            g->state = STATE_ACCOUNTS_MANAGER;
     }
 }

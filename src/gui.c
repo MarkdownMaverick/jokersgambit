@@ -72,6 +72,7 @@ Rectangle GetAtlasSourceRect(Rank rank, Suit suit)
         case SUIT_DIAMONDS: row = 2; break;
         case SUIT_SPADES:   row = 3; break;
         case SUIT_NONE:     row = 4; break;
+        default:            row = 4; break; // Default to bottom row
     }
 
     // Determine column based on rank
@@ -93,6 +94,7 @@ Rectangle GetAtlasSourceRect(Rank rank, Suit suit)
         case RANK_JOKER: col = 0;  break; // Already handled above
         case RANK_BACK:  col = 2;  break; // Already handled above
         case RANK_NONE:  col = 2;  break; // Already handled above
+        default:         col = 2;  break; // Default fallback
     }
 
     return AtlasRect(row, col);
@@ -685,12 +687,9 @@ void DrawGameLayout(const GameState *g)
 void DrawGameOver(GameState *g)
 {
     DrawRectangle(0, 0, (int)SCREEN_W, (int)SCREEN_H, Fade(BLACK, 0.8f));
-    
     const char *winner_name = (g->winner == 1) ? GetPlayerName(g, 1) : GetPlayerName(g, 2);
-    const char *loser_name = (g->winner == 1) ? GetPlayerName(g, 2) : GetPlayerName(g, 1);
-    
     char win_text[128];
-    snprintf(win_text, sizeof(win_text), "%s WINS!", winner_name);
+    snprintf(win_text, sizeof(win_text), "The Winner: %s!", winner_name);
     
     int tw = MeasureText(win_text, 90);
     int win_x = (int)((SCREEN_W - (float)tw) / 2.0f);
@@ -704,10 +703,9 @@ void DrawGameOver(GameState *g)
     
     // Get final scores (these already include the game balance)
     float winner_score = (g->winner == 1) ? g->final_score_p1 : g->final_score_p2;
-    float loser_score = (g->winner == 1) ? g->final_score_p2 : g->final_score_p1;
     
     // Winner gets bonus: rounds × $10.00
-    float winner_bonus = 10.0f * (float)g->total_rounds;
+    float winner_bonus = REWARD_MATCH * (float)g->total_rounds;
     
     int final_w = MeasureText(TextFormat("Final Balance: $9999.99"), 40);
     int final_x = (int)((SCREEN_W - (float)final_w) / 2.0f);
@@ -715,17 +713,12 @@ void DrawGameOver(GameState *g)
              final_x,
              (int)(SCREEN_H / 2.0f) - 50, 40, LIME);
     
-    int bonus_w = MeasureText(TextFormat("Victory Bonus: +$999.99 (99 rounds × $10)"), 35);
+    int bonus_w = MeasureText(TextFormat("Victory Bonus: +$999.99 (99 rounds)"), 35);
     int bonus_x = (int)((SCREEN_W - (float)bonus_w) / 2.0f);
-    DrawText(TextFormat("Victory Bonus: +$%.2f (%d rounds × $10)", winner_bonus, g->total_rounds),
+    DrawText(TextFormat("Victory Bonus: +$%.2f (%d rounds)", winner_bonus, g->total_rounds),
              bonus_x,
              (int)(SCREEN_H / 2.0f), 35, GREEN);
     
-    // Loser loses flat $100.00
-    float loser_penalty = -100.0f;
-    
-    int loser_w = MeasureText(TextFormat("PlayerNameLong - Final Balance: $9999.99"), 30);
-    int loser_x = (int)((SCREEN_W - (float)loser_w) / 2);
     // Animated coins background
     float t = (float)GetTime();
     int coinCount = 150;
@@ -746,8 +739,8 @@ void DrawGameOver(GameState *g)
         int textWidth = MeasureText(symbol, fontSize);
         float spin = cosf(t * 5.0f + i) * 0.1f;
         DrawText(symbol,
-                 (int)(center.x - textWidth / 2 + spin * radius),
-                 (int)(center.y - fontSize / 2 + spin * radius),
+                 (int)(center.x - (float)textWidth / 2.0f + spin * radius),
+                 (int)(center.y - (float)fontSize / 2.0f + spin * radius),
                  fontSize, DARKGREEN);
         DrawCircleV((Vector2){center.x - radius / 3, center.y - radius / 3},
                     radius / 4, Fade(WHITE, 0.5f));
@@ -762,7 +755,7 @@ void DrawGameOver(GameState *g)
     DrawRectangleRec(restart_btn, restart_hover ? LIME : DARKGREEN);
     DrawRectangleRec(menu_btn, menu_hover ? SKYBLUE : BLUE);
     DrawRectangleRec(quit_btn, quit_hover ? RED : MAROON);
-    DrawText("RESTART", restart_btn.x + 70, restart_btn.y + 25, 30, WHITE);
-    DrawText("MAIN MENU", menu_btn.x + 40, menu_btn.y + 25, 30, WHITE);
-    DrawText("QUIT", quit_btn.x + 100, quit_btn.y + 25, 30, WHITE);
+    DrawText("RESTART", (int)(restart_btn.x + 70), (int)(restart_btn.y + 25), 30, WHITE);
+    DrawText("MAIN MENU", (int)(menu_btn.x + 40), (int)(menu_btn.y + 25), 30, WHITE);
+    DrawText("QUIT", (int)(quit_btn.x + 100), (int)(quit_btn.y + 25), 30, WHITE);
 }

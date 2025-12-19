@@ -52,6 +52,7 @@
 #define LEADERBOARD_COL_WIDTH 150
 #define LEADERBOARD_HEADER_HEIGHT 40
 // Account and leaderboard limits
+#define DEFAULT_BALANCE 20.00f
 #define MAX_ACCOUNTS 5
 #define MAX_ACCOUNT_NAME_LEN 12
 #define MAX_LEADERBOARD_ENTRIES 100
@@ -67,8 +68,8 @@
 #define REWARD_PLACEMENT 2.00f
 #define REWARD_COMPLETION 20.00f
 #define JOKER_DISCARD 5.00f
-#define SPEED_BONUS_BASE 250.00f
-#define BONUS_CAP 500.00f
+//#define SPEED_BONUS_BASE 250.00f
+//#define BONUS_CAP 500.00f
 #define EPSILON 0.0001f // Small value for float comparisons
 // temp
 

@@ -1,4 +1,4 @@
-# Joker's Gambit v4.54
+# Joker's Gambit v4.55
 
 <p align="center">
 <img src="screenshot1.png" alt="Game Interface" width="30%" />
@@ -111,16 +111,10 @@ AI opponents in both P1 and P2 seats now place cards **simultaneously** during p
 ### Continue/Pass System
 Press "PASS" button (or keybind) when done placing cards. Costs -$5. Game proceeds when **both players** pass.
 
-
-
-
 ---
-
-- Currently working on...
-card Loading: I am loading textures individually for cards. For better performance and lower memory usage, I am converting to use a Texture Atlas (a single large image containing all card faces) and drawing specific regions of it using DrawTextureRec DECK0.png = Texture Atlas
-
-
-Im working on a Texture Atlas ,i have made a DECK0.png 2600px X 1500px the cards are arranged 13 cards wide 5 cards tall
+## Changes
+For better performance and lower memory usage, I have converted to use a Texture Atlas (a single large image containing all card faces) and drawing specific regions of it using DrawTextureRec DECK0.png = Texture Atlas
+DECK0.png 2600px X 1500px the cards are arranged 13 cards wide 5 cards tall
 in the order 
 // The atlas layout:
 //( ROW 1 2H, 3H, 4H, 5H, 6H, 7H, 8H, 9H, 10H, JH, QH, KH, AH
@@ -129,8 +123,4 @@ in the order
 // ROW 4 2S, 3S, 4S, 5S, 6S, 7S, 8S, 9S, 10S, JS, QS, KS, AS
 // ROW 5 JA, JB, B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10 )  (The first two cards in this row are useable cards(the two jokers) , the B0-B10 are variations of the back of the cards )
 
-- current state compiling with no errors in nowmal make,
-- A lot of errors while using strict makefile, i updated makefile for strict or non strict compiling , Switch the # on the cflags
-- Testing in progress...Dead code causing issues, 
-- fixing badly named vars &  const , 
-
+- current state: compiling with no errors ,- 

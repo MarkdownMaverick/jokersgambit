@@ -18,6 +18,5 @@ void ShowAccountStatus(GameState *g, const char *msg);
 
 // Account Creation
 void DrawAccountCreate(const GameState *g);
-void UpdateAccountCreate(GameState *g);
 
 #endif

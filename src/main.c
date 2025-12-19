@@ -513,7 +513,7 @@ void InitGame(GameState *g)
     }
     else
     {
-        g->p1_balance = 10.0f;
+        g->p1_balance = DEFAULT_BALANCE;
     }
     if (g->p2_account_index != -1)
     {
@@ -533,12 +533,12 @@ void InitGame(GameState *g)
         }
         if (g->p2_account_index == -1)
         {
-            g->p2_balance = 10.0f;
+            g->p2_balance = DEFAULT_BALANCE;
         }
     }
     else
     {
-        g->p2_balance = 10.0f;
+        g->p2_balance = DEFAULT_BALANCE;
     }
     g->delay_discard_p1 = BlankCard();
     g->delay_discard_p2 = BlankCard();
@@ -557,8 +557,8 @@ void InitGame(GameState *g)
 void RestartGameKeepingAccounts(GameState *g)
 {
     InitGame(g);
-    g->p1_balance = (g->p1_account_index != -1) ? (float)g->accounts[g->p1_account_index].balance : 10.0f;
-    g->p2_balance = (g->p2_account_index != -1) ? (float)g->accounts[g->p2_account_index].balance : 10.0f;
+    g->p1_balance = (g->p1_account_index != -1) ? (float)g->accounts[g->p1_account_index].balance : DEFAULT_BALANCE;
+    g->p2_balance = (g->p2_account_index != -1) ? (float)g->accounts[g->p2_account_index].balance : DEFAULT_BALANCE;
 }
 void UpdateScale()
 {
@@ -567,8 +567,8 @@ void UpdateScale()
     float scaleX = (float)screenW / GAME_WIDTH;
     float scaleY = (float)screenH / GAME_HEIGHT;
     scale = fminf(fmaxf(scaleX, scaleY), MAX_SCALE); // Fills screen, may crop
-    offset.x = (screenW - (GAME_WIDTH * scale)) / 2.0f;
-    offset.y = (screenH - (GAME_HEIGHT * scale)) / 2.0f;
+    offset.x = ((float)screenW - (GAME_WIDTH * scale)) / 2.0f;
+    offset.y = ((float)screenH - (GAME_HEIGHT * scale)) / 2.0f;
 }
 int main(void)
 {
@@ -639,6 +639,7 @@ int main(void)
                 if (g.p2_account_index != -1)
                     g.accounts[g.p2_account_index].balance = (double)g.p2_balance;
                 SaveAllAccounts(&g);
+                // Trigger game restart
                 RestartGameKeepingAccounts(&g);
                 g.state = STATE_P1_SELECT_DISCARD;
             }
@@ -690,10 +691,6 @@ int main(void)
         else if (g.state == STATE_ACCOUNTS_MANAGER)
         {
             UpdateAccountsManager(&g, mouse);
-        }
-        else if (g.state == STATE_ACCOUNT_CREATE)
-        {
-            UpdateAccountCreate(&g);
         }
         else if (g.state == STATE_REVEAL_AND_RESOLVE)
         {
@@ -999,10 +996,6 @@ int main(void)
         else if (g.state == STATE_ACCOUNTS_MANAGER)
         {
             DrawAccountsManager(&g);
-        }
-        else if (g.state == STATE_ACCOUNT_CREATE)
-        {
-            DrawAccountCreate(&g);
         }
         else if (g.state == STATE_LEADERBOARD)
         {

@@ -71,7 +71,7 @@ void LoadAllAccounts(GameState *g)
     fseek(fp, 0, SEEK_SET);
     
     // Allocate buffer
-    char *buffer = (char*)malloc(fsize + 1);
+    char *buffer = (char*)malloc((size_t)fsize + 1);
     if (!buffer) {
         printf("ERROR: Failed to allocate memory for accounts file\n");
         fclose(fp);
@@ -79,7 +79,7 @@ void LoadAllAccounts(GameState *g)
     }
     
     // Read file
-    size_t read_size = fread(buffer, 1, fsize, fp);
+    size_t read_size = fread(buffer, 1, (size_t)fsize, fp);
     buffer[read_size] = '\0';
     fclose(fp);
     fp = NULL; // Set to NULL after closing
@@ -225,14 +225,14 @@ void LoadLeaderboard(GameState *g)
     long fsize = ftell(fp);
     fseek(fp, 0, SEEK_SET);
     
-    char *buffer = (char*)malloc(fsize + 1);
+    char *buffer = (char*)malloc((size_t)fsize + 1);
     if (!buffer) {
         printf("ERROR: Failed to allocate memory for leaderboard\n");
         fclose(fp);
         return;
     }
     
-    size_t read_size = fread(buffer, 1, fsize, fp);
+    size_t read_size = fread(buffer, 1, (size_t)fsize, fp);
     buffer[read_size] = '\0';
     fclose(fp);
     fp = NULL;
@@ -339,7 +339,7 @@ void SaveLeaderboard(const GameState *g)
     
     char *json_string = cJSON_Print(root);
     if (!json_string) {
-        printf("ERROR: Failed to print leaderboard JSON\n");
+        printf("ERROR: Failed to print JSON\n");
         cJSON_Delete(root);
         return;
     }
@@ -361,42 +361,12 @@ void SaveLeaderboard(const GameState *g)
     printf("Saved %d leaderboard entries\n", g->leaderboard_count);
 }
 
-bool CreateNewAccount(GameState *g, const char *first, const char *last)
-{
-    if (g->account_count >= MAX_ACCOUNTS) return false;
-    if (!IsNameValid(first)) return false;
-    if (strlen(last) > 0 && !IsNameValid(last)) return false;
-    
-    int idx = g->account_count;
-    strncpy(g->accounts[idx].first_name, first, MAX_ACCOUNT_NAME_LEN);
-    g->accounts[idx].first_name[MAX_ACCOUNT_NAME_LEN] = '\0';
-    
-    if (strlen(last) > 0) {
-        strncpy(g->accounts[idx].last_name, last, MAX_ACCOUNT_NAME_LEN);
-        g->accounts[idx].last_name[MAX_ACCOUNT_NAME_LEN] = '\0';
-    } else {
-        g->accounts[idx].last_name[0] = '\0';
-    }
-    
-    g->accounts[idx].balance = 1000.0;
-    g->accounts[idx].wins = 0;
-    g->accounts[idx].losses = 0;
-    g->accounts[idx].is_ai = false;
-    g->accounts[idx].is_active = true;
-    g->accounts[idx].is_logged_in = false;
-    
-    g->account_count++;
-    SaveAllAccounts(g);
-    
-    return true;
-}
-
-void DeleteAccount(GameState *g, int index)
+void RenamePlayerAccount(GameState *g, int index)
 {
     if (index < 0 || index >= g->account_count) return;
-    if (g->accounts[index].is_ai) return; // Cannot delete AI accounts
+    if (g->accounts[index].is_ai) return; // Cannot rename AI accounts
     
-    // Shift accounts down
+    // Shift accounts down // This function is renamed and will be used later , players can no longer delete the default accounts.
     for (int i = index; i < g->account_count - 1; i++) {
         g->accounts[i] = g->accounts[i + 1];
     }

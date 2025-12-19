@@ -12,8 +12,7 @@ void SaveLeaderboard(const GameState *g);
 
 // Account Management Logic
 bool IsNameValid(const char *name);
-bool CreateNewAccount(GameState *g, const char *first, const char *last);
-void DeleteAccount(GameState *g, int index);
+void RenamePlayerAccount(GameState *g, int index);
 void LogoutAccount(GameState *g, int player);
 void LoginAccount(GameState *g, int index, int player);
 const char* GetPlayerName(const GameState *g, int player);
