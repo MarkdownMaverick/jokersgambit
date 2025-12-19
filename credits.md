@@ -110,7 +110,19 @@ To all the developers, researchers, and engineers behind these systems: thank yo
 
 ### The C Programming Language  
 Thanks to **Dennis Ritchie** and **Brian Kernighan** for creating C—a language that remains powerful and relevant decades later.
+## 🎨 Assets & Resources
 
+### Default Assets  
+- **Card Graphics:** Custom-designed specifically for this game.
+
+### **[GIMP](https://www.gimp.org/)** – Image Editing & Asset Creation
+- **License:** GPL v3+
+- **What it does:** Used for card editing, creating game assets, and visual design work.
+- **Why it's great:** Professional-grade image editing that's completely free and open-source. Perfect for indie game development.
+- **Website:** https://www.gimp.org/
+
+### Audio  
+- Sound effects were [downloaded from] https://mixkit.co/ for this game to match the casino and card game aesthetic.
 ### The Open Source Community  
 To everyone who contributes to open-source projects, writes documentation, answers questions on forums, and shares their knowledge freely—**thank you**. This game wouldn’t exist without your generosity.
 
