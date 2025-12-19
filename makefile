@@ -38,6 +38,12 @@ endif
 CC := gcc
 CFLAGS := -Wall -Wextra -std=c99 -O2 -march=native -pipe
 
+#CFLAGS := -Wall -Wextra -Wpedantic -std=c99 -O0 -g \
+          -Wunused -Wunused-variable -Wunused-parameter -Wunused-function \
+          -Wshadow -Wcast-align -Wwrite-strings -Wstrict-prototypes \
+          -Wmissing-prototypes -Wredundant-decls -Wnested-externs \
+          -Wfloat-equal -Wswitch-default -Wswitch-enum \
+          -Wconversion -Wformat=2 -Werror
 # Directories
 SRC_DIR := src
 INC_DIR := include

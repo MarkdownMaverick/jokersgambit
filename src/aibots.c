@@ -68,17 +68,20 @@ void AI_SelectDiscard(GameState *g, int player)
         }
     }
     switch (ai_type)
-    {
-    case AI_BOB:
-        AI_Bob_SelectDiscard(hand, hand_size, &best_idx);
-        break;
-    case AI_THEA:
-        AI_Thea_SelectDiscard(hand, hand_size, &best_idx);
-        break;
-    case AI_FLINT:
-        AI_Flint_SelectDiscard(hand, hand_size, &best_idx);
-        break;
-    }
+{
+case AI_BOB:
+    AI_Bob_SelectDiscard(hand, hand_size, &best_idx);
+    break;
+case AI_THEA:
+    AI_Thea_SelectDiscard(hand, hand_size, &best_idx);
+    break;
+case AI_FLINT:
+    AI_Flint_SelectDiscard(hand, hand_size, &best_idx);
+    break;
+default:  
+    AI_Thea_SelectDiscard(hand, hand_size, &best_idx);
+    break;
+}
     if (player == 1)
     {
         g->p1_discard_idx = best_idx;

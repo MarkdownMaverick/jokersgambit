@@ -1,4 +1,4 @@
-# Joker's Gambit v4.53
+# Joker's Gambit v4.54
 
 <p align="center">
 <img src="screenshot1.png" alt="Game Interface" width="30%" />
@@ -72,6 +72,8 @@ Rewards and costs changes daily trying to find balance.
 - P2 hand privacy toggle (local PvP/ PvAi)
 - AI move speed adjustment (Fast/Medium/Slow)
 ✅ **Display:** 1900×1080 max resolution with scaling & letterbox support
+✅ AI move speed setting (Fast/Medium/Slow) in settings menu  
+✅ Leaderboard sorting (by highest cash or lowest rounds)  
 
 ### AI Behaviors
 
@@ -109,38 +111,26 @@ AI opponents in both P1 and P2 seats now place cards **simultaneously** during p
 ### Continue/Pass System
 Press "PASS" button (or keybind) when done placing cards. Costs -$5. Game proceeds when **both players** pass.
 
----
 
-## Recent Changes (v4.53)
 
-### New Features
-✅ AI move speed setting (Fast/Medium/Slow) in settings menu  
-✅ Leaderboard sorting (by highest cash or lowest rounds)  
-✅ New win/loss payout system (winner: +rounds×$10, loser: -$100)
-
-### Bug Fixes
-✅ Fixed leaderboard not auto-sorting when new entries added  
-✅ Fixed leaderboard sort button not working  
-✅ Fixed AI speed setting resetting on game restart  
-✅ Fixed discard shuffle pattern (now fully random)  
-✅ Fixed simultaneous AI placement phase logic
 
 ---
 
-## Roadmap
-
-🔄 **In Development:**
-- Secondary premium currency system(TOKENS) 
-- Additional AI difficulty tweaks
-- More keybind options for menu navigation
+- Currently working on...
+card Loading: I am loading textures individually for cards. For better performance and lower memory usage, I am converting to use a Texture Atlas (a single large image containing all card faces) and drawing specific regions of it using DrawTextureRec DECK0.png = Texture Atlas
 
 
-📋 **Planned:**
-- Tutorial/help screen
-- Achievement system
-- Card animation polish
-- Audio volume controls
+Im working on a Texture Atlas ,i have made a DECK0.png 2600px X 1500px the cards are arranged 13 cards wide 5 cards tall
+in the order 
+// The atlas layout:
+//( ROW 1 2H, 3H, 4H, 5H, 6H, 7H, 8H, 9H, 10H, JH, QH, KH, AH
+// ROW 2 2C, 3C, 4C, 5C, 6C, 7C, 8C, 9C, 10C, JC, QC, KC, AC
+// ROW 3 2D, 3D, 4D, 5D, 6D, 7D, 8D, 9D, 10D, JD, QD, KD, AD
+// ROW 4 2S, 3S, 4S, 5S, 6S, 7S, 8S, 9S, 10S, JS, QS, KS, AS
+// ROW 5 JA, JB, B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10 )  (The first two cards in this row are useable cards(the two jokers) , the B0-B10 are variations of the back of the cards )
 
----
+- current state compiling with no errors in nowmal make,
+- A lot of errors while using strict makefile, i updated makefile for strict or non strict compiling , Switch the # on the cflags
+- Testing in progress...Dead code causing issues, 
+- fixing badly named vars &  const , 
 
-**Built with:** C, Raylib, cJSON  

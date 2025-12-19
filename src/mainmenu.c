@@ -103,7 +103,7 @@ void DrawSettings(GameState *g)
     DrawRectangleRec(cover_btn_rect, cover_hover ? Fade(cover_color, 0.8f) : cover_color);
     const char *cover_text = g->cover_p2_cards ? "COVERED" : "UNCOVERED";
     int text_w = MeasureText(cover_text, 35);
-    DrawText(cover_text, CENTER_X - text_w / 2, 380 + 25, 35, BLACK);
+    DrawText(cover_text, (int)CENTER_X - (float)text_w / 2, 380 + 25, 35, BLACK);
     DrawText("(Hides P2 cards from view during local play)", CENTER_X - 300, 480, 25, LIGHTGRAY);
     // AI Move Speed Setting
     DrawText("AI Move Speed:", CENTER_X - 300, 550, 40, WHITE);
@@ -112,12 +112,12 @@ void DrawSettings(GameState *g)
     // Determine current speed text and color
     const char *speed_text;
     Color speed_color;
-    if (g->ai_move_delay == 1.0f)
+if (fabsf(g->ai_move_delay - 1.0f) < 0.001f)
     {
         speed_text = "FAST";
         speed_color = LIME;
     }
-    else if (g->ai_move_delay == 2.0f)
+    else if (fabsf(g->ai_move_delay - 2.0f) < 0.001f)
     {
         speed_text = "MEDIUM";
         speed_color = ORANGE;
@@ -129,13 +129,13 @@ void DrawSettings(GameState *g)
     }
     DrawRectangleRec(ai_speed_rect, ai_speed_hover ? Fade(speed_color, 0.8f) : speed_color);
     int speed_text_w = MeasureText(speed_text, 35);
-    DrawText(speed_text, CENTER_X - speed_text_w / 2, 620 + 25, 35, BLACK);
+    DrawText(speed_text, (int)CENTER_X - (float)speed_text_w / 2, 620 + 25, 35, BLACK);
     DrawText("(Click to cycle: Fast → Medium → Slow)", CENTER_X - 270, 720, 25, LIGHTGRAY);
     // Back Button
     Rectangle back_rect = {CENTER_X - 150, SCREEN_H - 180, 300, 80};
     bool back_hover = CheckCollisionPointRec(mouse, back_rect);
     DrawRectangleRec(back_rect, back_hover ? RED : MAROON);
-    DrawText("BACK", back_rect.x + 100, back_rect.y + 25, 35, WHITE);
+    DrawText("BACK", (int)back_rect.x + 100, (float)back_rect.y + 25, 35, WHITE);
 }
 void UpdateSettings(GameState *g, Vector2 mouse)
 {
@@ -151,11 +151,12 @@ void UpdateSettings(GameState *g, Vector2 mouse)
         else if (CheckCollisionPointRec(mouse, ai_speed_rect))
         {
             // Cycle through speeds: Fast (1.0) → Medium (2.0) → Slow (3.0) → Fast
-            if (g->ai_move_delay == 1.0f)
+            if (fabsf(g->ai_move_delay - 1.0f) < EPSILON)
             {
                 g->ai_move_delay = 2.0f; // Fast → Medium
             }
-            else if (g->ai_move_delay == 2.0f)
+            else if (fabsf(g->ai_move_delay - 2.0f) < EPSILON)
+
             {
                 g->ai_move_delay = 3.0f; // Medium → Slow
             }
@@ -187,7 +188,7 @@ void DrawAccountsManager(const GameState *g)
     if (GetTime() - g->account_status_timer < 2.0)
     {
         float alpha = 1.0f - (float)(GetTime() - g->account_status_timer) / 2.0f;
-        DrawText(g->account_status_message, CENTER_X - MeasureText(g->account_status_message, 30) / 2, 220, 30, Fade(GREEN, alpha));
+        DrawText(g->account_status_message, (int)CENTER_X - (float)MeasureText(g->account_status_message, 30) / 2.0f, 220, 30, Fade(GREEN, alpha));
     }
     int y = 280;
     // 3. Draw Accounts List
@@ -233,14 +234,7 @@ void DrawAccountsManager(const GameState *g)
         const char *p2_txt = is_p2 ? "LOGOUT P2" : "LOGIN P2";
         DrawRectangleRec(btn_p2, hover_p2 ? Fade(p2_col, 0.8f) : p2_col);
         DrawText(p2_txt, btn_p2.x + 10, btn_p2.y + 10, 20, BLACK);
-        // Delete Button (only for human accounts)
-        if (!a->is_ai)
-        {
-            Rectangle btn_del = {row_rect.x + row_rect.width - 100, row_rect.y + 30, 80, btn_h};
-            bool hover_del = CheckCollisionPointRec(GetMousePosition(), btn_del);
-            DrawRectangleRec(btn_del, hover_del ? RED : MAROON);
-            DrawText("DEL", btn_del.x + 20, btn_del.y + 10, 20, WHITE);
-        }
+    
         y += 110;
     }
     // Bottom Navigation
@@ -263,7 +257,6 @@ void UpdateAccountsManager(GameState *g, Vector2 mouse)
         float start_x = row_rect.x + 600;
         Rectangle btn_p1 = {start_x, row_rect.y + 30, btn_w, btn_h};
         Rectangle btn_p2 = {start_x + 160, row_rect.y + 30, btn_w, btn_h};
-        Rectangle btn_del = {row_rect.x + row_rect.width - 100, row_rect.y + 30, 80, btn_h};
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
         {
             // P1 Login/Logout
@@ -310,21 +303,7 @@ void UpdateAccountsManager(GameState *g, Vector2 mouse)
                     }
                 }
             }
-            // Delete (only for human accounts not logged in)
-            else if (!g->accounts[i].is_ai && CheckCollisionPointRec(mouse, btn_del))
-            {
-                if (g->p1_account_index == i || g->p2_account_index == i)
-                {
-                    ShowAccountStatus(g, "Cannot delete logged-in account!");
-                }
-                else
-                {
-                    DeleteAccount(g, i);
-                    ShowAccountStatus(g, "Account deleted");
-                    action_taken = true;
-                }
-            }
-        }
+                    }
         if (action_taken)
             break;
         y += 110;
@@ -391,7 +370,7 @@ void UpdateAccountCreate(GameState *g)
     {
         if ((key >= 'A' && key <= 'Z') || (key >= 'a' && key <= 'z'))
         {
-            int len = strlen(field);
+            long unsigned int len = strlen(field);
             if (len < MAX_ACCOUNT_NAME_LEN)
             {
                 field[len] = (char)key;

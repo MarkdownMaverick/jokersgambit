@@ -8,11 +8,9 @@
 #define MAX_SCALE 1.0f
 float scale = 1.0f;
 Vector2 offset = {0, 0};
-Texture2D g_card_back_texture = {0};
 Texture2D g_background_texture = {0};
 Texture2D g_ui_frame_texture = {0};
 Texture2D g_button_texture = {0};
-Texture2D g_temp_cover_texture = {0};
 Sound g_discard_sound = {0};
 Sound g_place_sound = {0};
 Sound g_filled_rank_sound = {0};
@@ -23,8 +21,8 @@ Sound g_matching_jokers_sound = {0};
 Sound g_matching_cards_sound = {0};
 Sound g_continue_sound = {0};
 Sound g_coin_sound = {0};
-Sound g_beep_sound = {0};       // <--- ADDED: Beep sound definition
-Music g_background_music = {0}; // <--- ADDED: Background music definition
+Sound g_shuffle_sound = {0};
+Music g_background_music = {0};
 GameState g_initial_state = {0};
 float GetRewardMultiplier(int completed_ranks)
 {
@@ -43,12 +41,7 @@ Card BlankCard(void)
 }
 static void BuildFilename(Card *c)
 {
-    if (c->rank == RANK_JOKER)
-    {
-        if (strlen(c->filename) == 0)
-            strcpy(c->filename, "JA.png");
-        return;
-    }
+
     char rank_str[4] = {0};
     char suit_char = ' ';
     switch (c->rank)
@@ -92,6 +85,9 @@ static void BuildFilename(Card *c)
     case RANK_ACE:
         strcpy(rank_str, "A");
         break;
+    case RANK_JOKER:
+    case RANK_BACK:
+    case RANK_NONE:
     default:
         strcpy(rank_str, "ERR");
         break;
@@ -110,6 +106,9 @@ static void BuildFilename(Card *c)
     case SUIT_SPADES:
         suit_char = 'S';
         break;
+    case SUIT_NONE:
+        suit_char = 'X';
+        break;
     default:
         suit_char = 'X';
         break;
@@ -125,15 +124,7 @@ bool IsPlayerAI(const GameState *g, int player)
     }
     return false;
 }
-static void LoadCardTexture(Card *c, const char *path)
-{
-    if (c->rank != RANK_JOKER || strlen(c->filename) == 0)
-        BuildFilename(c);
-    char full[128];
-    snprintf(full, sizeof(full), "%s%s", path, c->filename);
-    c->texture = LoadTexture(full);
-    c->is_valid = (c->texture.id != 0);
-}
+
 static bool IsRankCompleted(const Card slots[3])
 {
     int count = 0;
@@ -317,7 +308,7 @@ float CalculateFinalScore(float balance, int total_rounds, bool is_winner)
     if (is_winner)
     {
         // Winner gets: current balance + (rounds × $10.00)
-        float winner_bonus = 10.0f * total_rounds;
+        float winner_bonus = (float)REWARD_MATCH * (float)total_rounds;
         return balance + winner_bonus;
     }
     else
@@ -378,7 +369,7 @@ void AddLeaderboardEntry(GameState *g, int winner)
     time_t timer;
     time(&timer);
     struct tm *tm_info = localtime(&timer);
-    strftime(e->timestamp, 32, "%m/%d/%y", tm_info);
+    strftime(e->timestamp, 32, "%m/%d/%Y", tm_info); // Capital Y for 4-digit year
     g->leaderboard_count++;
     // Sort the leaderboard after adding the new entry
     // This ensures it's always in the correct order
@@ -444,7 +435,7 @@ void InitGame(GameState *g)
     AIType saved_opponent_ai = g->selected_opponent_ai;
     bool saved_cover = g->cover_p2_cards;
     bool saved_sort = g->leaderboard_sort_by_rounds;
-    float saved_ai_delay = g->ai_move_delay; // <--- ADD THIS LINE
+    float saved_ai_delay = g->ai_move_delay;
     memcpy(saved_accounts, g->accounts, sizeof(saved_accounts));
     memcpy(saved_leaderboard, g->leaderboard, sizeof(saved_leaderboard));
     *g = (GameState){0};
@@ -458,39 +449,50 @@ void InitGame(GameState *g)
     g->selected_opponent_ai = saved_opponent_ai;
     g->cover_p2_cards = saved_cover;
     g->leaderboard_sort_by_rounds = saved_sort;
-    g->ai_move_delay = saved_ai_delay; // <--- ADD THIS LINE
-    // ... rest of InitGame remains the same ...
+    g->ai_move_delay = saved_ai_delay;
     Rank keys[5] = {RANK_ACE, RANK_KING, RANK_QUEEN, RANK_JACK, RANK_10};
     int idx = 0;
     for (int s = 0; s < 4; s++)
     {
         for (int r = 0; r < 13; r++)
         {
-            bool is_key = (s == SUIT_HEARTS && (r == 0 || r == 12 || r == 11 || r == 10 || r == 9));
+            // Skip the 5 Hearts keycards (10, J, Q, K, A)
+            bool is_key = (s == SUIT_HEARTS &&
+                           (r == RANK_10 || r == RANK_JACK || r == RANK_QUEEN ||
+                            r == RANK_KING || r == RANK_ACE));
             if (!is_key)
             {
-                g->deck[idx] = (Card){.rank = (Rank)r, .suit = (Suit)s};
-                LoadCardTexture(&g->deck[idx], "cards/");
-                if (g->deck[idx].is_valid)
-                    idx++;
+                g->deck[idx].rank = (Rank)r;
+                g->deck[idx].suit = (Suit)s;
+                g->deck[idx].is_valid = true;          // Card is valid
+                g->deck[idx].texture = (Texture2D){0}; // Not used with atlas
+                BuildFilename(&g->deck[idx]);          // Set filename for joker detection
+                idx++;
             }
         }
     }
+    // Add the 2 Jokers
     for (int i = 0; i < 2; i++)
     {
-        g->deck[idx] = (Card){.rank = RANK_JOKER, .suit = SUIT_NONE};
+        g->deck[idx].rank = RANK_JOKER;
+        g->deck[idx].suit = SUIT_NONE;
+        g->deck[idx].is_valid = true;
+        g->deck[idx].texture = (Texture2D){0};
         snprintf(g->deck[idx].filename, 16, i == 0 ? "JA.png" : "JB.png");
-        LoadCardTexture(&g->deck[idx], "cards/");
-        if (g->deck[idx].is_valid)
-            idx++;
+        idx++;
     }
     g->current_deck_size = idx;
     g->top_card_index = idx - 1;
+    // Initialize the 5 Hearts keycards
     for (int i = 0; i < KEYCARDS; i++)
     {
-        g->keycards[i] = (Card){.rank = keys[i], .suit = SUIT_HEARTS};
-        LoadCardTexture(&g->keycards[i], "keycards/");
+        g->keycards[i].rank = keys[i];
+        g->keycards[i].suit = SUIT_HEARTS;
+        g->keycards[i].is_valid = true;
+        g->keycards[i].texture = (Texture2D){0};
+        BuildFilename(&g->keycards[i]);
     }
+    // Shuffle the deck
     for (int i = g->top_card_index; i > 0; i--)
     {
         int j = rand() % (i + 1);
@@ -498,6 +500,7 @@ void InitGame(GameState *g)
         g->deck[i] = g->deck[j];
         g->deck[j] = t;
     }
+    // Deal initial hands
     for (int i = 0; i < HAND_SIZE; i++)
     {
         g->player1_hand[i] = DrawFromDeck(g);
@@ -563,7 +566,7 @@ void UpdateScale()
     int screenH = GetScreenHeight();
     float scaleX = (float)screenW / GAME_WIDTH;
     float scaleY = (float)screenH / GAME_HEIGHT;
-    scale = fminf(fminf(scaleX, scaleY), MAX_SCALE);
+    scale = fminf(fmaxf(scaleX, scaleY), MAX_SCALE); // Fills screen, may crop
     offset.x = (screenW - (GAME_WIDTH * scale)) / 2.0f;
     offset.y = (screenH - (GAME_HEIGHT * scale)) / 2.0f;
 }
@@ -575,7 +578,8 @@ int main(void)
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(SCREEN_W, SCREEN_H, "JOKERS GAMBIT");
     SetTargetFPS(60);
-    InitAudioDevice(); 
+    InitAudioDevice();
+    LoadCardAtlas();
     g_discard_sound = LoadSound("sfx/discard.wav");
     g_filled_rank_sound = LoadSound("sfx/filledrank.wav");
     g_win_sound = LoadSound("sfx/win.wav");
@@ -586,17 +590,15 @@ int main(void)
     g_matching_cards_sound = LoadSound("sfx/matchingcards.wav");
     g_continue_sound = LoadSound("sfx/continue.wav");
     g_coin_sound = LoadSound("sfx/coin.wav");
-    g_beep_sound = LoadSound("sfx/beep.wav"); // card shuffle sound name needs to be changed!
+    g_shuffle_sound = LoadSound("sfx/shuffle.wav");
     g_background_music = LoadMusicStream("sfx/track.mp3");
     SetMusicVolume(g_background_music, 0.3f);
     PlayMusicStream(g_background_music);
     SetSoundVolume(g_discard_sound, 0.5f);
     SetSoundVolume(g_filled_rank_sound, 0.7f);
-    g_card_back_texture = LoadTexture("keycards/BACK.png");
-    g_background_texture = LoadTexture("keycards/background.png");
-    g_ui_frame_texture = LoadTexture("keycards/frame.png");
-    g_button_texture = LoadTexture("keycards/btn.png");
-    g_temp_cover_texture = LoadTexture("keycards/temp.png");
+    g_background_texture = LoadTexture("assets/background.png");
+    g_ui_frame_texture = LoadTexture("assets/frame.png");
+    g_button_texture = LoadTexture("assets/button.png");
     InitAccounts(&g);
     LoadAllAccounts(&g);
     LoadLeaderboard(&g);
@@ -613,7 +615,7 @@ int main(void)
         Rectangle menu_btn_rect = {40, 20, 300, 70};
         Rectangle restart_btn_rect = {SCREEN_W - 340, 20, 300, 70};
         bool game_active = (g.state >= STATE_P1_SELECT_DISCARD && g.state <= STATE_CHECK_WIN);
-        // In Game Menu/Restart button handling 
+        // In Game Menu/Restart button handling
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
         {
             if (CheckCollisionPointRec(mouse, menu_btn_rect) &&
@@ -709,7 +711,6 @@ int main(void)
             g.state = STATE_WAIT_FOR_TURN;
             g.ai_timer = 0;
             g.Reshuffle_cover_timer = 0; // RESET P2 AI TIMER HERE FOR SIMULTANEOUS MOVES
-            PlaySound(g_reveal_sound);
         }
         else if (g.state == STATE_HAND_RESHUFFLE)
         {
@@ -717,8 +718,6 @@ int main(void)
             if (g.placement_phases_count % 5 == 0)
             {
                 g.state = STATE_COVER_ANIMATION;
-                g.Reshuffle_cover_timer = 2.0f;
-                PlaySound(g_beep_sound);
             }
             else
             {
@@ -729,13 +728,28 @@ int main(void)
         }
         else if (g.state == STATE_COVER_ANIMATION)
         {
-            g.Reshuffle_cover_timer -= GetFrameTime();
-            if (g.Reshuffle_cover_timer <= 0)
+            Rectangle animSource = GetDealingAnimationRect();
+            PlaySound(g_shuffle_sound);
+
+            // Draw cards flying or shimmering for both players
+            for (int i = 0; i < 5; i++)
             {
-                RefreshHands(&g);
-                g.revealed_p1 = BlankCard();
-                g.revealed_p2 = BlankCard();
-                g.state = STATE_CHECK_WIN;
+                // Calculate a "fly-in" position based on the timer
+                float progress = 1.0f - (g.Reshuffle_cover_timer / 2.0f);
+                Rectangle dest = HandRect(1, i);
+                dest.y -= (1.0f - progress) * 500; // Fly up from bottom
+                PlaySound(g_coin_sound);
+
+                DrawTexturePro(g_atlas_texture, animSource, dest, (Vector2){0, 0}, 0.0f, WHITE);
+
+                g.Reshuffle_cover_timer -= GetFrameTime();
+                if (g.Reshuffle_cover_timer <= 0)
+                {
+                    RefreshHands(&g);
+                    g.revealed_p1 = BlankCard();
+                    g.revealed_p2 = BlankCard();
+                    g.state = STATE_CHECK_WIN;
+                }
             }
         }
         else if (g.state == STATE_CHECK_WIN)
@@ -753,7 +767,7 @@ int main(void)
                 g.p2_balance = g.final_score_p2;
                 UpdateAccountBalances(&g);
                 AddLeaderboardEntry(&g, g.winner);
-                PlaySound(g_win_sound); 
+                PlaySound(g_win_sound);
             }
             else
             {
@@ -1012,7 +1026,7 @@ int main(void)
             {
                 DrawRectangleRec(menu_btn_rect, menu_hover ? GOLD : GRAY);
             }
-            DrawText("MAIN MENU", menu_btn_rect.x + 60, menu_btn_rect.y + 20, 30, BLACK);
+            DrawText("MAIN MENU", (int)(menu_btn_rect.x + 60), (int)(menu_btn_rect.y + 20), 30, BLACK);
             // Draw Restart Button (Top Right)
             bool restart_hover = CheckCollisionPointRec(mouse, restart_btn_rect);
             if (g_button_texture.id != 0)
@@ -1024,7 +1038,7 @@ int main(void)
             {
                 DrawRectangleRec(restart_btn_rect, restart_hover ? GOLD : GRAY);
             }
-            DrawText("RESTART", restart_btn_rect.x + 85, restart_btn_rect.y + 20, 30, BLACK);
+            DrawText("RESTART", (int)(restart_btn_rect.x + 85), (int)(restart_btn_rect.y + 20), 30, BLACK);
             // Check if game is currently in an active state or game over for shortcuts
             bool game_active_or_over = (g.state >= STATE_P1_SELECT_DISCARD && g.state <= STATE_CHECK_WIN) || (g.state == STATE_GAME_OVER);
             if (IsKeyPressed(KEY_COMMA))
@@ -1053,37 +1067,16 @@ int main(void)
                 RestartGameKeepingAccounts(&g);
                 g.state = STATE_P1_SELECT_DISCARD;
             }
-            if (g.state == STATE_COVER_ANIMATION)
-            {
-                for (int i = 0; i < g.p1_hand_size; i++)
-                {
-                    Rectangle r = HandRect(1, i); // This function uses gui.c positions
-                    if (g_temp_cover_texture.id != 0)
-                    {
-                        DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},
-                                       r, (Vector2){0, 0}, 0, WHITE);
-                    }
-                }
-                for (int i = 0; i < g.p2_hand_size; i++)
-                {
-                    Rectangle r = HandRect(2, i);
-                    if (g_temp_cover_texture.id != 0)
-                    {
-                        DrawTexturePro(g_temp_cover_texture, (Rectangle){0, 0, (float)g_temp_cover_texture.width, (float)g_temp_cover_texture.height},
-                                       r, (Vector2){0, 0}, 0, WHITE);
-                    }
-                }
-            }
         }
+
         EndMode2D();
         EndDrawing();
         UpdateScale();
     }
-    UnloadTexture(g_card_back_texture);
+    UnloadTexture(g_atlas_texture);
     UnloadTexture(g_background_texture);
     UnloadTexture(g_ui_frame_texture);
     UnloadTexture(g_button_texture);
-    UnloadTexture(g_temp_cover_texture);
     UnloadSound(g_discard_sound);
     UnloadSound(g_filled_rank_sound);
     UnloadSound(g_win_sound);
@@ -1094,7 +1087,7 @@ int main(void)
     UnloadSound(g_matching_cards_sound);
     UnloadSound(g_continue_sound);
     UnloadSound(g_coin_sound);
-    UnloadSound(g_beep_sound);
+    UnloadSound(g_shuffle_sound);
     UnloadMusicStream(g_background_music);
     CloseAudioDevice();
     CloseWindow();

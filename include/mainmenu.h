@@ -14,6 +14,7 @@ void UpdateSettings(GameState *g, Vector2 mouse);
 // Accounts Manager
 void DrawAccountsManager(const GameState *g);
 void UpdateAccountsManager(GameState *g, Vector2 mouse);
+void ShowAccountStatus(GameState *g, const char *msg);
 
 // Account Creation
 void DrawAccountCreate(const GameState *g);
