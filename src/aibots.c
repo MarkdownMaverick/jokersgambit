@@ -98,13 +98,12 @@ void AI_UpdatePlacementPhase(GameState *g, int player)
     Card *hand = (player == 1) ? g->player1_hand : g->player2_hand;
     int *hand_size = (player == 1) ? &g->p1_hand_size : &g->p2_hand_size;
     Card(*slots)[3] = (player == 1) ? g->p1_slots : g->p2_slots;
-    float *balance = (player == 1) ? &g->p1_balance : &g->p2_balance;
+    float *credits = (player == 1) ? &g->p1_credits : &g->p2_credits;
+    float *winnings = (player == 1) ? &g->p1_game_winnings : &g->p2_game_winnings;  // NEW
     int *ranks_complete = (player == 1) ? &g->p1_completed_ranks : &g->p2_completed_ranks;
     bool *done_placing = (player == 1) ? &g->p1_done_placing : &g->p2_done_placing;
     if (*done_placing)
         return;
-    // We repurpose 'Reshuffle_cover_timer' for P2 so both can move simultaneously
-    // without interfering with each other's timers.
     float *timer = (player == 1) ? &g->ai_timer : &g->Reshuffle_cover_timer;
     *timer += GetFrameTime();
     if (*timer > g->ai_move_delay)
@@ -132,7 +131,8 @@ void AI_UpdatePlacementPhase(GameState *g, int player)
                             if (!slots[k][s].is_valid)
                             {
                                 slots[k][s] = c;
-                                *balance += placement_reward;
+                                *credits += placement_reward;
+                                *winnings += placement_reward;  // NEW: Track in winnings
                                 PlaySound(g_place_sound);
                                 CheckRankCompletionBonus(g, player, k, cards_before);
                                 for (int j = i; j < *hand_size - 1; j++)
@@ -148,7 +148,8 @@ void AI_UpdatePlacementPhase(GameState *g, int player)
             }
         }
         *done_placing = true;
-        *balance -= COST_PER_ROUND; // Removed magic number
+        *credits -= COST_PER_ROUND;
+        *winnings -= COST_PER_ROUND;  // NEW: Track in winnings
         PlaySound(g_coin_sound);
         if (player == 1)
             g->p1_ai_done_placing_rounds = true;

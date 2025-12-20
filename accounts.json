@@ -2,47 +2,52 @@
 	"accounts":	[{
 			"first_name":	"BOB",
 			"last_name":	"",
-			"balance":	0,
+			"credits":	1000000,
 			"wins":	0,
 			"losses":	0,
 			"is_ai":	true,
 			"ai_type":	0,
-			"is_active":	true
+			"is_active":	true,
+			"tokens":	0
 		}, {
 			"first_name":	"THEA",
 			"last_name":	"",
-			"balance":	0,
+			"credits":	1000000,
 			"wins":	0,
 			"losses":	0,
 			"is_ai":	true,
 			"ai_type":	1,
-			"is_active":	true
+			"is_active":	true,
+			"tokens":	0
 		}, {
 			"first_name":	"FLINT",
 			"last_name":	"",
-			"balance":	0,
+			"credits":	1000000,
 			"wins":	0,
 			"losses":	0,
 			"is_ai":	true,
 			"ai_type":	2,
-			"is_active":	true
+			"is_active":	true,
+			"tokens":	0
 		}, {
 			"first_name":	"player",
 			"last_name":	"one",
-			"balance":	0,
+			"credits":	50,
 			"wins":	0,
 			"losses":	0,
 			"is_ai":	false,
 			"ai_type":	0,
-			"is_active":	false
+			"is_active":	true,
+			"tokens":	0
 		}, {
 			"first_name":	"player",
 			"last_name":	"two",
-			"balance":	0,
+			"credits":	50,
 			"wins":	0,
 			"losses":	0,
 			"is_ai":	false,
 			"ai_type":	0,
-			"is_active":	false
+			"is_active":	true,
+			"tokens":	0
 		}]
 }

@@ -18,5 +18,6 @@ void ShowAccountStatus(GameState *g, const char *msg);
 
 // Account Creation
 void DrawAccountCreate(const GameState *g);
-
+void DrawShop(const GameState *g);
+void UpdateShop(GameState *g, Vector2 mouse);
 #endif

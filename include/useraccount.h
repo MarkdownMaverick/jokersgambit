@@ -16,7 +16,7 @@ void RenamePlayerAccount(GameState *g, int index);
 void LogoutAccount(GameState *g, int player);
 void LoginAccount(GameState *g, int index, int player);
 const char* GetPlayerName(const GameState *g, int player);
-void UpdateAccountBalances(GameState *g);
+void UpdateAccountCredits(GameState *g);
 bool IsAlpha(int c);
 
 #endif
